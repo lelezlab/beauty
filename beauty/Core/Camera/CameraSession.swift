@@ -1,0 +1,129 @@
+import AVFoundation
+import CoreMotion
+import UIKit
+
+final class CameraSession: NSObject, ObservableObject {
+	@Published var sampleBuffer: CMSampleBuffer?
+	@Published var exposureTooLow: Bool = false
+	@Published var isBlurry: Bool = false
+	@Published var levelDegrees: Double = 0
+
+	let captureSession = AVCaptureSession()
+	private let sessionQueue = DispatchQueue(label: "camera.session.queue")
+	private let motionManager = CMMotionManager()
+	private let videoOutput = AVCaptureVideoDataOutput()
+    private let ciContext = CIContext(options: nil)
+
+	override init() {
+		super.init()
+		configure()
+		startMotionUpdates()
+	}
+
+	private func configure() {
+		sessionQueue.async {
+			self.captureSession.beginConfiguration()
+			self.captureSession.sessionPreset = .high
+			guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) ??
+					AVCaptureDevice.default(for: .video) else { return }
+			guard let input = try? AVCaptureDeviceInput(device: device) else { return }
+			if self.captureSession.canAddInput(input) { self.captureSession.addInput(input) }
+			self.videoOutput.setSampleBufferDelegate(self, queue: self.sessionQueue)
+			self.videoOutput.alwaysDiscardsLateVideoFrames = true
+			if self.captureSession.canAddOutput(self.videoOutput) { self.captureSession.addOutput(self.videoOutput) }
+			self.captureSession.commitConfiguration()
+			self.captureSession.startRunning()
+		}
+	}
+
+	private func startMotionUpdates() {
+		motionManager.deviceMotionUpdateInterval = 0.1
+		motionManager.startDeviceMotionUpdates(to: sessionQueue) { [weak self] motion, _ in
+			guard let self, let motion else { return }
+			let roll = motion.attitude.roll * 180.0 / .pi
+			DispatchQueue.main.async { self.levelDegrees = roll }
+		}
+	}
+
+	func capturePhoto(completion: @escaping (UIImage?) -> Void) {
+		let connection = videoOutput.connection(with: .video)
+		sessionQueue.async { [weak self] in
+			guard let self, let buffer = self.sampleBuffer, let connection else { DispatchQueue.main.async { completion(nil) }; return }
+			let orientation = connection.videoOrientation
+			guard let image = Self.imageFromSampleBuffer(buffer: buffer, orientation: orientation) else { DispatchQueue.main.async { completion(nil) }; return }
+			DispatchQueue.main.async { completion(image) }
+		}
+	}
+
+	private static func imageFromSampleBuffer(buffer: CMSampleBuffer, orientation: AVCaptureVideoOrientation) -> UIImage? {
+		guard let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return nil }
+		let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+		let context = CIContext(options: nil)
+		guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
+		return UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .leftMirrored)
+	}
+}
+
+extension CameraSession: AVCaptureVideoDataOutputSampleBufferDelegate {
+	func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+		DispatchQueue.main.async { [weak self] in self?.sampleBuffer = sampleBuffer }
+		self.estimateQuality(from: sampleBuffer)
+	}
+
+	private func estimateQuality(from sampleBuffer: CMSampleBuffer) {
+		guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+		let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+
+		// Average luminance via CIAreaAverage
+		let extent = ciImage.extent
+		let avgFilter = CIFilter(name: "CIAreaAverage")!
+		avgFilter.setValue(ciImage, forKey: kCIInputImageKey)
+		avgFilter.setValue(CIVector(cgRect: extent), forKey: kCIInputExtentKey)
+		var luma: Float = 0.5
+		if let output = avgFilter.outputImage, let outCG = ciContext.createCGImage(output, from: CGRect(x: 0, y: 0, width: 1, height: 1)) {
+			let data = CFDataCreateMutable(nil, 0)
+			let dest = CGImageDestinationCreateWithData(data!, UTType.png.identifier as CFString, 1, nil)
+			if let dest = dest {
+				CGImageDestinationAddImage(dest, outCG, nil)
+				CGImageDestinationFinalize(dest)
+				if let bytes = CFDataGetBytePtr(data!) {
+					let r = Float(bytes[33]) / 255.0
+					let g = Float(bytes[34]) / 255.0
+					let b = Float(bytes[35]) / 255.0
+					luma = 0.2126*r + 0.7152*g + 0.0722*b
+				}
+			}
+		}
+
+		// Edge magnitude as blur proxy
+		var blurScore: Float = 0.5
+		let edges = CIFilter(name: "CIEdges")!
+		edges.setValue(ciImage, forKey: kCIInputImageKey)
+		edges.setValue(1.0, forKey: kCIInputIntensityKey)
+		if let edgeOut = edges.outputImage {
+			let avg = CIFilter(name: "CIAreaAverage")!
+			avg.setValue(edgeOut, forKey: kCIInputImageKey)
+			avg.setValue(CIVector(cgRect: extent), forKey: kCIInputExtentKey)
+			if let out = avg.outputImage, let cg = ciContext.createCGImage(out, from: CGRect(x: 0, y: 0, width: 1, height: 1)) {
+				let data = CFDataCreateMutable(nil, 0)
+				let dest = CGImageDestinationCreateWithData(data!, UTType.png.identifier as CFString, 1, nil)
+				if let dest = dest {
+					CGImageDestinationAddImage(dest, cg, nil)
+					CGImageDestinationFinalize(dest)
+					if let bytes = CFDataGetBytePtr(data!) {
+						let r = Float(bytes[33]) / 255.0
+						let g = Float(bytes[34]) / 255.0
+						let b = Float(bytes[35]) / 255.0
+						blurScore = (r + g + b) / 3.0
+					}
+				}
+			}
+		}
+
+		DispatchQueue.main.async { [weak self] in
+			self?.exposureTooLow = luma < 0.25
+			self?.isBlurry = blurScore < 0.08
+		}
+	}
+}
+
