@@ -1,0 +1,29 @@
+name: iOS CI (Simulator Build)
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Xcode Version
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Build (iOS Simulator)
+        run: |
+          set -euo pipefail
+          xcodebuild -scheme beauty \
+                     -configuration Debug \
+                     -sdk iphonesimulator \
+                     -destination 'generic/platform=iOS Simulator' \
+                     build
+
