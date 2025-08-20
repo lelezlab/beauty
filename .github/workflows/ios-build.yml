@@ -14,9 +14,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Xcode Version
+        id: xcode
         run: |
           xcodebuild -version
           xcrun simctl list runtimes
+          echo "ver=$(xcodebuild -version | shasum -a 256 | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-${{ steps.xcode.outputs.ver }}-deriveddata
 
       - name: Build (iOS Simulator)
         run: |
@@ -26,4 +34,26 @@ jobs:
                      -sdk iphonesimulator \
                      -destination 'generic/platform=iOS Simulator' \
                      build
+
+      - name: Unit Tests (find available iPhone simulator)
+        run: |
+          set -euo pipefail
+          NAME=$(xcrun simctl list devices available | grep -E 'iPhone' | head -n1 | sed -E 's/^\s*([^\(]+)\s*\(.*/\1/')
+          echo "Using simulator: $NAME"
+          xcodebuild -scheme beauty \
+                     -configuration Debug \
+                     -sdk iphonesimulator \
+                     -destination "platform=iOS Simulator,name=$NAME" \
+                     -skip-testing:beautyUITests \
+                     test
+
+      - name: Install SwiftLint
+        run: |
+          brew install swiftlint
+          swiftlint --version
+
+      - name: Run SwiftLint (non-blocking)
+        run: |
+          # Report issues in GitHub Actions log but do not fail the build yet
+          swiftlint --reporter github-actions-logging || true
 
