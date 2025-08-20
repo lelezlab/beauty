@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MainTabView: View {
 	@State private var showCapture = false
@@ -19,7 +20,7 @@ struct MainTabView: View {
 
 	private var home: some View {
 		VStack(spacing: 16) {
-			Text("SoYoung 面部美学模拟").font(.largeTitle).bold()
+			Text("beauty 面部美学模拟").font(.largeTitle).bold()
 			Text("引导拍摄、AI 关键点、三庭五眼与一键模板")
 			Button("开始拍摄") { showCapture = true }
 				.buttonStyle(.borderedProminent)

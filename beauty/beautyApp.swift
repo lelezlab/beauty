@@ -6,27 +6,27 @@
 //
 
 import SwiftUI
-import SwiftData
+// import SwiftData
+import UIKit
+import AuthenticationServices
+ 
 
 @main
 struct beautyApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    // Temporarily remove SwiftData container to simplify preview/build
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @StateObject private var appState = AppState()
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
+            Group {
+                if appState.isLoggedIn {
+                    MainTabView()
+                } else {
+                    LoginView()
+                }
+            }
+            .environmentObject(appState)
         }
-        .modelContainer(sharedModelContainer)
     }
 }
