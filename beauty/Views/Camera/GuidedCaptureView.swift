@@ -79,7 +79,7 @@ struct GuidedCaptureView: View {
 			awbLocked: camera.awbLocked
 		)
 		BeautyTelemetryService.shared.recordCapture(qc: qc)
-		switch step { case 0: front = image; case 1: left = image; default: right = image }
+		switch step { case 0: front = image; CaptureStore.shared.frontImage = image; case 1: left = image; default: right = image }
 		step = min(step + 1, 2)
 	} }
 

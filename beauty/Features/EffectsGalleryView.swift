@@ -80,14 +80,15 @@ struct EffectDetailView: View {
 
 extension EffectDetailView {
     func recomputePreview() async {
-        // 简化：从最近一张 front 照片或占位获取图与 landmarks（此处省略存取，示例用纯色图）
-        let size = CGSize(width: 640, height: 800)
-        UIGraphicsBeginImageContextWithOptions(size, true, 0)
-        UIColor.white.setFill(); UIRectFill(CGRect(origin: .zero, size: size))
-        let img = UIGraphicsGetImageFromCurrentImageContext() ?? UIImage()
-        UIGraphicsEndImageContext()
-        // 没有即时 landmarks 管线的上下文下以 nil 传入（EffectComposer 会回退）
-        let rendered = EffectComposer.render(image: img, pack: pack, controls: controlValues, landmarks: nil)
+        let img = CaptureStore.shared.frontImage ?? {
+            let size = CGSize(width: 640, height: 800)
+            UIGraphicsBeginImageContextWithOptions(size, true, 0)
+            UIColor.white.setFill(); UIRectFill(CGRect(origin: .zero, size: size))
+            let i = UIGraphicsGetImageFromCurrentImageContext() ?? UIImage()
+            UIGraphicsEndImageContext(); return i
+        }()
+        let lmk = CaptureStore.shared.frontLandmarks
+        let rendered = EffectComposer.render(image: img, pack: pack, controls: controlValues, landmarks: lmk)
         await MainActor.run { self.preview = rendered }
     }
 }

@@ -32,6 +32,7 @@ struct AnalysisView: View {
 		let analyzer = FaceAnalyzer()
 		if let l = try? await analyzer.detectLandmarks(in: front) {
 			landmarks = l
+			CaptureStore.shared.frontLandmarks = l
 			let m = MetricsCalculator.compute(from: l, imageSize: front.size)
 			metrics = m
 			let mp = BTMetricsPayload(

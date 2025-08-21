@@ -94,6 +94,7 @@ extension CameraSession: AVCaptureVideoDataOutputSampleBufferDelegate {
 	func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
 		DispatchQueue.main.async { [weak self] in self?.sampleBuffer = sampleBuffer }
 		self.estimateQuality(from: sampleBuffer)
+		self.pollDeviceParams()
 	}
 
 	private func estimateQuality(from sampleBuffer: CMSampleBuffer) {
@@ -151,5 +152,18 @@ extension CameraSession: AVCaptureVideoDataOutputSampleBufferDelegate {
 			self?.isBlurry = blurScore < (self?.minEdgeScore ?? 0.08)
 		}
 	}
+}
+
+private extension CameraSession {
+    func pollDeviceParams() {
+        guard let device = (captureSession.inputs.first as? AVCaptureDeviceInput)?.device else { return }
+        self.aeLocked = (device.exposureMode == .locked)
+        self.awbLocked = (device.whiteBalanceMode == .locked)
+        let fov = Double(device.activeFormat.videoFieldOfView)
+        self.fieldOfViewDegrees = fov
+        let rad = fov * .pi / 180.0
+        let denom = 2.0 * tan(rad/2.0)
+        if denom > 0.0001 { self.focalEqMM = 43.27 / denom }
+    }
 }
 
