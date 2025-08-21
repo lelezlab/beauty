@@ -105,9 +105,21 @@ private struct LandmarksOverlay: View {
 private struct KnowledgeDetailPlaceholder: View {
 	let key: String
 	var body: some View {
-		ScrollView { Text("知识点占位：\(key)\n后续接入本地/远端知识库，图文+风险+护理。")
-				.padding() }
-			.navigationTitle("知识库")
+		let article = KnowledgeBase.article(for: key)
+		return ScrollView {
+			VStack(alignment: .leading, spacing: 12) {
+				Text(article?.title ?? "知识点").font(.title3).bold()
+				if let s = article?.summary { Text(s).foregroundStyle(.secondary) }
+				ForEach(article?.sections ?? [], id: \.heading) { section in
+					VStack(alignment: .leading, spacing: 6) {
+						Text(section.heading).bold()
+						Text(section.body)
+					}
+				}
+			}
+			.padding()
+		}
+		.navigationTitle("知识库")
 	}
 }
 
