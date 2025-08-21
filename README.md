@@ -212,6 +212,11 @@
   - [ ] CI：构建/测试/SwiftLint
   - [ ] 崩溃/日志上报（可选）
  - 商城与内容
+- 远程效果中心
+  - 🟡 协议/清单/验签/灰度/缓存/回滚框架（EffectPack/Manifest/EffectCenter/验签/示例 UI）
+  - 📝 本地兜底包、EffectComposer 接入与真实渲染
+  - 📝 README_RemoteEffects 使用文档
+
    - [ ] 商品分发与详情、购物车与订单占位
    - [ ] 案例库（搜索/筛选/详情）
    - [ ] 机构榜单/地图、医生库与详情

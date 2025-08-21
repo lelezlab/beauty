@@ -16,12 +16,15 @@ struct MainTabView: View {
 			NavigationStack { HomeView() }
 				.tabItem { Label("首页", systemImage: "sparkles") }
 				.tag(1)
+			NavigationStack { EffectsGalleryView() }
+				.tabItem { Label("效果", systemImage: "wand.and.stars") }
+				.tag(2)
 			NavigationStack { history }
 				.tabItem { Label("历史", systemImage: "clock.arrow.circlepath") }
-				.tag(2)
+				.tag(3)
 			NavigationStack { settings }
 				.tabItem { Label("设置", systemImage: "gear") }
-				.tag(3)
+				.tag(4)
 		}
 	}
 
