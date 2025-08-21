@@ -8,6 +8,10 @@ final class CameraSession: NSObject, ObservableObject {
 	@Published var exposureTooLow: Bool = false
 	@Published var isBlurry: Bool = false
 	@Published var levelDegrees: Double = 0
+	@Published var aeLocked: Bool = false
+	@Published var awbLocked: Bool = false
+	@Published var focalEqMM: Double = 50.0
+	@Published var fieldOfViewDegrees: Double = 60.0
 
 	// 质量门控阈值（可调）
 	let minLuma: Float = 0.25
@@ -43,8 +47,21 @@ final class CameraSession: NSObject, ObservableObject {
 			self.videoOutput.alwaysDiscardsLateVideoFrames = true
 			if self.captureSession.canAddOutput(self.videoOutput) { self.captureSession.addOutput(self.videoOutput) }
 			self.captureSession.commitConfiguration()
+			// 读取设备参数（近似）
+			self.readDeviceParameters(device)
 			self.captureSession.startRunning()
 		}
+	}
+
+	private func readDeviceParameters(_ device: AVCaptureDevice) {
+		let fov = Double(device.activeFormat.videoFieldOfView)
+		self.fieldOfViewDegrees = fov
+		// 35mm 等效焦距近似：f ≈ 43.27 / (2*tan(FOV/2)) （对角 FOV）
+		let rad = fov * .pi / 180.0
+		let denom = 2.0 * tan(rad/2.0)
+		if denom > 0.0001 { self.focalEqMM = 43.27 / denom }
+		self.aeLocked = (device.exposureMode == .locked)
+		self.awbLocked = (device.whiteBalanceMode == .locked)
 	}
 
 	private func startMotionUpdates() {

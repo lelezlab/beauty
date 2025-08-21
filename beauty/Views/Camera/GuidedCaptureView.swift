@@ -73,10 +73,10 @@ struct GuidedCaptureView: View {
 			yaw: Double(camera.levelDegrees),
 			pitch: nil,
 			roll: nil,
-			focalEq: nil,
-			distanceBucket: 3,
-			aeLocked: nil,
-			awbLocked: nil
+			focalEq: camera.focalEqMM,
+			distanceBucket: estimateDistanceBucket(),
+			aeLocked: camera.aeLocked,
+			awbLocked: camera.awbLocked
 		)
 		BeautyTelemetryService.shared.recordCapture(qc: qc)
 		switch step { case 0: front = image; case 1: left = image; default: right = image }
@@ -84,6 +84,11 @@ struct GuidedCaptureView: View {
 	} }
 
 	private func resetCurrent() { switch step { case 0: front = nil; case 1: left = nil; default: right = nil } }
+
+	private func estimateDistanceBucket() -> Int {
+		// 简化：基于人脸覆盖率与 FOV 估计 1..5 桶；此处先用静态 3，后续接入人脸框占比
+		return 3
+	}
 
 	private var levelIndicator: some View {
 		HStack(spacing: 6) {

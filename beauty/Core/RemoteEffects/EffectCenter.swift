@@ -65,6 +65,13 @@ final class EffectCenter: ObservableObject {
             let current = idDir.appendingPathComponent("current/pack.json")
             if let data = try? Data(contentsOf: current), let pack = try? JSONDecoder().decode(EffectPack.self, from: data) { loaded.append(pack) }
         }
+        // 离线兜底：加载内置本地效果包
+        if let bundle = Bundle.main.path(forResource: "Effects/local/rhinoplasty_2025Q3_01", ofType: "json"),
+           let data = try? Data(contentsOf: URL(fileURLWithPath: bundle)),
+           let pack = try? JSONDecoder().decode(EffectPack.self, from: data) { loaded.append(pack) }
+        if let bundle = Bundle.main.path(forResource: "Effects/local/jawline_2025Q3_01", ofType: "json"),
+           let data = try? Data(contentsOf: URL(fileURLWithPath: bundle)),
+           let pack = try? JSONDecoder().decode(EffectPack.self, from: data) { loaded.append(pack) }
         activeEffects = loaded
     }
 
