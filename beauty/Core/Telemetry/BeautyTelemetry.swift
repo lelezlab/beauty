@@ -1,6 +1,7 @@
 import Foundation
 import CoreGraphics
 import UIKit
+import CryptoKit
 
 // MARK: - Data Models
 
@@ -227,12 +228,7 @@ final class BeautyTelemetryService {
 // MARK: - Helper
 enum SignatureHelper {
     static func sha256Hex(_ data: Data) -> String {
-        #if canImport(CryptoKit)
-        import CryptoKit
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        #else
-        return data.map { String(format: "%02x", $0) }.joined() // placeholder
-        #endif
     }
 }
 

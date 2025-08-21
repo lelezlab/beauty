@@ -1,6 +1,7 @@
 import AVFoundation
 import CoreMotion
 import UIKit
+import UniformTypeIdentifiers
 
 final class CameraSession: NSObject, ObservableObject {
 	@Published var sampleBuffer: CMSampleBuffer?
