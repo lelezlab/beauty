@@ -2,6 +2,7 @@ import AVFoundation
 import CoreMotion
 import UIKit
 import UniformTypeIdentifiers
+import Vision
 
 final class CameraSession: NSObject, ObservableObject {
 	@Published var sampleBuffer: CMSampleBuffer?
@@ -12,6 +13,8 @@ final class CameraSession: NSObject, ObservableObject {
 	@Published var awbLocked: Bool = false
 	@Published var focalEqMM: Double = 50.0
 	@Published var fieldOfViewDegrees: Double = 60.0
+	@Published var faceCoverageRatio: Double = 0.0 // 人脸高度 / 画面高度
+	@Published var distanceBucket: Int = 3 // 1..5
 
 	// 质量门控阈值（可调）
 	let minLuma: Float = 0.25
@@ -33,6 +36,7 @@ final class CameraSession: NSObject, ObservableObject {
 		super.init()
 		configure()
 		startMotionUpdates()
+		startDistanceUpdates()
 	}
 
 	private func configure() {
@@ -62,6 +66,35 @@ final class CameraSession: NSObject, ObservableObject {
 		if denom > 0.0001 { self.focalEqMM = 43.27 / denom }
 		self.aeLocked = (device.exposureMode == .locked)
 		self.awbLocked = (device.whiteBalanceMode == .locked)
+	}
+
+	private func startDistanceUpdates() {
+		let timer = DispatchSource.makeTimerSource(queue: sessionQueue)
+		timer.schedule(deadline: .now() + 0.5, repeating: 0.8)
+		timer.setEventHandler { [weak self] in
+			guard let self, let buffer = self.sampleBuffer, let pixel = CMSampleBufferGetImageBuffer(buffer) else { return }
+			let handler = VNImageRequestHandler(cvPixelBuffer: pixel, orientation: .up, options: [:])
+			let req = VNDetectFaceRectanglesRequest()
+			try? handler.perform([req])
+			if let first = (req.results as? [VNFaceObservation])?.first {
+				let h = Double(first.boundingBox.height) // 已归一化
+				let ratio = max(0.0, min(1.0, h))
+				let bucket = Self.mapCoverageToBucket(ratio)
+				DispatchQueue.main.async { [weak self] in self?.faceCoverageRatio = ratio; self?.distanceBucket = bucket }
+			}
+		}
+		timer.resume()
+	}
+
+	private static func mapCoverageToBucket(_ ratio: Double) -> Int {
+		// 简易阈值：小于0.18太远(1)，0.18..0.28(2)，0.28..0.40(3，推荐)，0.40..0.55(4)，>0.55太近(5)
+		switch ratio {
+		case ..<0.18: return 1
+		case ..<0.28: return 2
+		case ..<0.40: return 3
+		case ..<0.55: return 4
+		default: return 5
+		}
 	}
 
 	private func startMotionUpdates() {

@@ -18,7 +18,7 @@ struct GuidedCaptureView: View {
 					.overlay { guideOverlay }
 					.overlay { if FeatureFlags.goldenGuidesEnabled { GoldenGuidesOverlay().allowsHitTesting(false) } }
 				.overlay(alignment: .top) {
-					HStack { levelIndicator; qualityBadges }.padding(8)
+					HStack { levelIndicator; qualityBadges; distanceHint }.padding(8)
 				}
 			}
 			Text(instructionText)
@@ -104,6 +104,18 @@ struct GuidedCaptureView: View {
 			if camera.exposureTooLow { badge("光线不足") }
 			if camera.isBlurry { badge("画面模糊") }
 		}
+	}
+
+	private var distanceHint: some View {
+		let b = camera.distanceBucket
+		let text: String = {
+			switch b { case 1: return "远一点"; case 2: return "稍远"; case 3: return "距离合适"; case 4: return "稍近"; default: return "近一点" }
+		}()
+		return Text(text)
+			.font(.caption)
+			.padding(6)
+			.background(Color.blue.opacity(0.8), in: Capsule())
+			.foregroundStyle(.white)
 	}
 
 	private var guideOverlay: some View {
