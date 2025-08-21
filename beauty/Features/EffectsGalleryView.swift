@@ -23,6 +23,9 @@ struct EffectsGalleryView: View {
 struct EffectDetailView: View {
     let pack: EffectPack
     @State private var controlValues: [String: Double] = [:]
+    @State private var realism: Int = 3
+    @State private var satisfaction: Int = 3
+    @State private var selectedRegions: Set<String> = []
 
     var body: some View {
         ScrollView {
@@ -41,6 +44,27 @@ struct EffectDetailView: View {
                 Button("记录此次效果使用") {
                     let effect = BTEffectRecord(effectId: pack.id, version: pack.version, params: controlValues, confidenceScore: nil)
                     BeautyTelemetryService.shared.recordEffect(effect)
+                }
+                // 主观评分与区域
+                VStack(alignment: .leading) {
+                    Text("主观评分（1–5）")
+                    HStack {
+                        Stepper("真实感：\(realism)", value: $realism, in: 1...5)
+                        Stepper("满意度：\(satisfaction)", value: $satisfaction, in: 1...5)
+                    }
+                    Text("想改善区域")
+                    HStack {
+                        ForEach(["nose","chin","zygoma","lips","jawline"], id: \.self) { r in
+                            let on = selectedRegions.contains(r)
+                            Button(r) { if on { selectedRegions.remove(r) } else { selectedRegions.insert(r) } }
+                                .buttonStyle(.borderedProminent)
+                                .tint(on ? .blue : .gray)
+                        }
+                    }
+                    Button("提交评分与区域") {
+                        let rating = BTRatingRecord(realism: realism, satisfaction: satisfaction, regions: Array(selectedRegions))
+                        BeautyTelemetryService.shared.recordRating(rating)
+                    }
                 }
             }
             .padding()

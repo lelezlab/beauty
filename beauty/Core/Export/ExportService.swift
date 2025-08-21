@@ -14,7 +14,17 @@ enum ExportService {
             .font: UIFont.systemFont(ofSize: 14, weight: .semibold),
             .foregroundColor: UIColor.gray.withAlphaComponent(0.7)
         ]
-        let str = NSAttributedString(string: watermark, attributes: attrs)
+        let qc = BeautyTelemetryService.shared.lastQC
+        let meta = [
+            "focal": qc?.focalEq.map { String(format: "f=%.0fmm", $0) } ?? "f≈50mm",
+            "dist": qc?.distanceBucket.map { "d\($0)" } ?? "d?",
+            "yaw": qc?.yaw.map { String(format: "yaw=%.0f°", $0) } ?? "yaw?",
+            "pitch": qc?.pitch.map { String(format: "pitch=%.0f°", $0) } ?? "pitch?",
+            "roll": qc?.roll.map { String(format: "roll=%.0f°", $0) } ?? "roll?",
+            "AE": (qc?.aeLocked ?? false) ? "AE:lock" : "AE:auto",
+            "AWB": (qc?.awbLocked ?? false) ? "AWB:lock" : "AWB:auto"
+        ].values.joined(separator: "  ")
+        let str = NSAttributedString(string: watermark + "  " + meta, attributes: attrs)
         str.draw(at: CGPoint(x: 10, y: height - 20))
         let img = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()

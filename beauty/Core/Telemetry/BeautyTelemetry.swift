@@ -49,10 +49,14 @@ public struct BTSessionEnvelope: Codable {
     public let device: String
     public let os: String
     public let locale: String
+    public let deviceHash: String
 }
 
+public struct BTActionRecord: Codable { public let withPDF: Bool; public let shared: Bool; public let exported: Bool }
+public struct BTExpertAdvice: Codable { public let effectId: String; public let adviceJSON: [String: [Double]]?; public let contraindications: [String]? }
+
 public struct BTEvent: Codable {
-    public enum Kind: String, Codable { case capture, geometry, metrics, effect, rating }
+    public enum Kind: String, Codable { case capture, geometry, metrics, effect, rating, action, expert }
     public let kind: Kind
     public let session: BTSessionEnvelope
     public let captureQC: BTCaptureQC?
@@ -60,6 +64,8 @@ public struct BTEvent: Codable {
     public let metrics: BTMetricsPayload?
     public let effect: BTEffectRecord?
     public let rating: BTRatingRecord?
+    public let action: BTActionRecord?
+    public let expert: BTExpertAdvice?
 }
 
 // MARK: - Settings / Consent
@@ -129,12 +135,16 @@ final class BeautyTelemetryService {
         let dev = UIDevice.current.model
         let os = "iOS " + UIDevice.current.systemVersion
         let locale = Locale.current.identifier
-        return BTSessionEnvelope(sessionId: sessionId, timestamp: Date(), device: dev, os: os, locale: locale)
+        let idfv = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let deviceHash = SignatureHelper.sha256Hex(idfv.data(using: .utf8) ?? Data())
+        return BTSessionEnvelope(sessionId: sessionId, timestamp: Date(), device: dev, os: os, locale: locale, deviceHash: deviceHash)
     }
 
+    private(set) var lastQC: BTCaptureQC?
     func recordCapture(qc: BTCaptureQC) {
         guard BeautyTelemetrySettings.telemetryEnabled else { return }
-        let event = BTEvent(kind: .capture, session: envelope(), captureQC: qc, geom: nil, metrics: nil, effect: nil, rating: nil)
+        lastQC = qc
+        let event = BTEvent(kind: .capture, session: envelope(), captureQC: qc, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: nil)
         persist(event)
     }
 
@@ -143,19 +153,31 @@ final class BeautyTelemetryService {
         guard let (ipd, norm) = LandmarkNormalizer.normalize(points: points) else { return }
         var geom = BTGeomPayload(ipd: ipd, points: norm)
         if BeautyTelemetrySettings.differentialPrivacyEnabled { geom = addNoise(geom) }
-        let event = BTEvent(kind: .geometry, session: envelope(), captureQC: nil, geom: geom, metrics: metrics, effect: nil, rating: nil)
+        let event = BTEvent(kind: .geometry, session: envelope(), captureQC: nil, geom: geom, metrics: metrics, effect: nil, rating: nil, action: nil, expert: nil)
         persist(event)
     }
 
     func recordEffect(_ record: BTEffectRecord) {
         guard BeautyTelemetrySettings.telemetryEnabled else { return }
-        let event = BTEvent(kind: .effect, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: record, rating: nil)
+        let event = BTEvent(kind: .effect, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: record, rating: nil, action: nil, expert: nil)
         persist(event)
     }
 
     func recordRating(_ rating: BTRatingRecord) {
         guard BeautyTelemetrySettings.telemetryEnabled else { return }
-        let event = BTEvent(kind: .rating, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: rating)
+        let event = BTEvent(kind: .rating, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: rating, action: nil, expert: nil)
+        persist(event)
+    }
+
+    func recordAction(_ action: BTActionRecord) {
+        guard BeautyTelemetrySettings.telemetryEnabled else { return }
+        let event = BTEvent(kind: .action, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: action, expert: nil)
+        persist(event)
+    }
+
+    func recordExpert(_ expert: BTExpertAdvice) {
+        guard BeautyTelemetrySettings.telemetryEnabled else { return }
+        let event = BTEvent(kind: .expert, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: expert)
         persist(event)
     }
 
@@ -199,6 +221,18 @@ final class BeautyTelemetryService {
             }
         }
         return BTGeomPayload(ipd: geom.ipd, points: out)
+    }
+}
+
+// MARK: - Helper
+enum SignatureHelper {
+    static func sha256Hex(_ data: Data) -> String {
+        #if canImport(CryptoKit)
+        import CryptoKit
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        #else
+        return data.map { String(format: "%02x", $0) }.joined() // placeholder
+        #endif
     }
 }
 

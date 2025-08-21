@@ -34,6 +34,14 @@ struct AnalysisView: View {
 			landmarks = l
 			let m = MetricsCalculator.compute(from: l, imageSize: front.size)
 			metrics = m
+			let mp = BTMetricsPayload(
+				threeZones: Double(m.threeFacialZonesRatio),
+				fiveEyes: Double(m.fiveEyesRatio),
+				nasolabialDeg: Double(m.nasolabialAngleDegrees),
+				chinProjection: Double(m.chinProjectionRatio),
+				faceWH: Double(m.faceWidthToHeight)
+			)
+			BeautyTelemetryService.shared.recordGeometry(points: l.points, metrics: mp)
 			suggestions = SuggestionsEngine.generate(from: m)
 		}
 	}
