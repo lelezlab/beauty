@@ -65,6 +65,20 @@ struct GuidedCaptureView: View {
 
 	private func capture() { camera.capturePhoto { image in
 		guard let image else { return }
+		// 埋点：基础 QC（示意，后续可接真实相机参数）
+		let qc = BTCaptureQC(
+			blurScore: camera.isBlurry ? 1.0 : 0.0,
+			exposureMean: camera.exposureTooLow ? 0.1 : 0.6,
+			faceCoverage: 0.6,
+			yaw: Double(camera.levelDegrees),
+			pitch: nil,
+			roll: nil,
+			focalEq: nil,
+			distanceBucket: 3,
+			aeLocked: nil,
+			awbLocked: nil
+		)
+		BeautyTelemetryService.shared.recordCapture(qc: qc)
 		switch step { case 0: front = image; case 1: left = image; default: right = image }
 		step = min(step + 1, 2)
 	} }

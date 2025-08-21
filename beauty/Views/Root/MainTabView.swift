@@ -35,6 +35,7 @@ struct MainTabView: View {
 		List {
 			NavigationLink("语言 / Language") { LanguageSettingsView() }
 			NavigationLink("合规与底线") { ComplianceView().environmentObject(PrivacyManager.shared) }
+			NavigationLink("隐私与数据") { PrivacyDataView() }
 			Text("登录/订阅/通知设置（占位）")
 		}
 	}

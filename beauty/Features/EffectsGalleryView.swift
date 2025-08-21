@@ -38,6 +38,10 @@ struct EffectDetailView: View {
                 }
                 // 占位预览图
                 RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)).frame(height: 220).overlay(Text("预览占位：实际渲染管线接入 EffectComposer"))
+                Button("记录此次效果使用") {
+                    let effect = BTEffectRecord(effectId: pack.id, version: pack.version, params: controlValues, confidenceScore: nil)
+                    BeautyTelemetryService.shared.recordEffect(effect)
+                }
             }
             .padding()
         }
