@@ -8,9 +8,19 @@ final class CameraSession: NSObject, ObservableObject {
 	@Published var isBlurry: Bool = false
 	@Published var levelDegrees: Double = 0
 
+	// 质量门控阈值（可调）
+	let minLuma: Float = 0.25
+	let minEdgeScore: Float = 0.08
+
 	let captureSession = AVCaptureSession()
 	private let sessionQueue = DispatchQueue(label: "camera.session.queue")
 	private let motionManager = CMMotionManager()
+	private let motionQueue: OperationQueue = {
+		let q = OperationQueue()
+		q.name = "camera.motion.queue"
+		q.qualityOfService = .userInitiated
+		return q
+	}()
 	private let videoOutput = AVCaptureVideoDataOutput()
     private let ciContext = CIContext(options: nil)
 
@@ -38,7 +48,7 @@ final class CameraSession: NSObject, ObservableObject {
 
 	private func startMotionUpdates() {
 		motionManager.deviceMotionUpdateInterval = 0.1
-		motionManager.startDeviceMotionUpdates(to: sessionQueue) { [weak self] motion, _ in
+		motionManager.startDeviceMotionUpdates(to: motionQueue) { [weak self] motion, _ in
 			guard let self, let motion else { return }
 			let roll = motion.attitude.roll * 180.0 / .pi
 			DispatchQueue.main.async { self.levelDegrees = roll }
@@ -46,16 +56,14 @@ final class CameraSession: NSObject, ObservableObject {
 	}
 
 	func capturePhoto(completion: @escaping (UIImage?) -> Void) {
-		let connection = videoOutput.connection(with: .video)
 		sessionQueue.async { [weak self] in
-			guard let self, let buffer = self.sampleBuffer, let connection else { DispatchQueue.main.async { completion(nil) }; return }
-			let orientation = connection.videoOrientation
-			guard let image = Self.imageFromSampleBuffer(buffer: buffer, orientation: orientation) else { DispatchQueue.main.async { completion(nil) }; return }
+			guard let self, let buffer = self.sampleBuffer else { DispatchQueue.main.async { completion(nil) }; return }
+			guard let image = Self.imageFromSampleBuffer(buffer: buffer) else { DispatchQueue.main.async { completion(nil) }; return }
 			DispatchQueue.main.async { completion(image) }
 		}
 	}
 
-	private static func imageFromSampleBuffer(buffer: CMSampleBuffer, orientation: AVCaptureVideoOrientation) -> UIImage? {
+	private static func imageFromSampleBuffer(buffer: CMSampleBuffer) -> UIImage? {
 		guard let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return nil }
 		let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
 		let context = CIContext(options: nil)
@@ -121,8 +129,8 @@ extension CameraSession: AVCaptureVideoDataOutputSampleBufferDelegate {
 		}
 
 		DispatchQueue.main.async { [weak self] in
-			self?.exposureTooLow = luma < 0.25
-			self?.isBlurry = blurScore < 0.08
+			self?.exposureTooLow = luma < (self?.minLuma ?? 0.25)
+			self?.isBlurry = blurScore < (self?.minEdgeScore ?? 0.08)
 		}
 	}
 }

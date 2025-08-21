@@ -1,6 +1,6 @@
 import Foundation
 import Vision
-import iphone 16 Pro
+import UIKit
 
 struct FacialLandmarksResult: Codable {
 	let boundingBox: CGRect
