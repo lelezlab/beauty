@@ -6,15 +6,22 @@ struct MainTabView: View {
 	@State private var front: UIImage?
 	@State private var left: UIImage?
 	@State private var right: UIImage?
+    @State private var selectedTab: Int = 0
 
 	var body: some View {
-		TabView {
+		TabView(selection: $selectedTab) {
+			NavigationStack { ResultsDashboardView(metrics: nil, suggestions: []) }
+				.tabItem { Label("总览", systemImage: "chart.bar.doc.horizontal") }
+				.tag(0)
 			NavigationStack { HomeView() }
 				.tabItem { Label("首页", systemImage: "sparkles") }
+				.tag(1)
 			NavigationStack { history }
 				.tabItem { Label("历史", systemImage: "clock.arrow.circlepath") }
+				.tag(2)
 			NavigationStack { settings }
 				.tabItem { Label("设置", systemImage: "gear") }
+				.tag(3)
 		}
 	}
 
@@ -24,6 +31,7 @@ struct MainTabView: View {
 	private var settings: some View {
 		List {
 			NavigationLink("语言 / Language") { LanguageSettingsView() }
+			NavigationLink("合规与底线") { ComplianceView().environmentObject(PrivacyManager.shared) }
 			Text("登录/订阅/通知设置（占位）")
 		}
 	}
