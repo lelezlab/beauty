@@ -8,6 +8,10 @@ final class CameraSession: NSObject, ObservableObject {
 	@Published var isBlurry: Bool = false
 	@Published var levelDegrees: Double = 0
 
+	// 质量门控阈值（可调）
+	let minLuma: Float = 0.25
+	let minEdgeScore: Float = 0.08
+
 	let captureSession = AVCaptureSession()
 	private let sessionQueue = DispatchQueue(label: "camera.session.queue")
 	private let motionManager = CMMotionManager()
@@ -125,8 +129,8 @@ extension CameraSession: AVCaptureVideoDataOutputSampleBufferDelegate {
 		}
 
 		DispatchQueue.main.async { [weak self] in
-			self?.exposureTooLow = luma < 0.25
-			self?.isBlurry = blurScore < 0.08
+			self?.exposureTooLow = luma < (self?.minLuma ?? 0.25)
+			self?.isBlurry = blurScore < (self?.minEdgeScore ?? 0.08)
 		}
 	}
 }

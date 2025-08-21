@@ -78,6 +78,16 @@ struct LoginView: View {
 				.buttonStyle(.borderedProminent)
 				.disabled(!canLogin)
 			}
+
+#if DEBUG
+			Button {
+				appState.login(with: "dev-simulator")
+			} label: {
+				Text("开发者快速登录（模拟器）")
+					.frame(maxWidth: .infinity)
+			}
+			.buttonStyle(.bordered)
+#endif
 		}
 		.padding()
 	}

@@ -8,12 +8,14 @@ struct GuidedCaptureView: View {
 	@State private var left: UIImage?
 	@State private var right: UIImage?
 	@State private var step: Int = 0
+	@State private var requireQualityPass: Bool = true
 	var onFinished: (UIImage, UIImage, UIImage) -> Void
 
 	var body: some View {
 		VStack(spacing: 12) {
 			ZStack(alignment: .topTrailing) {
 				CameraPreview(sampleBuffer: $camera.sampleBuffer)
+					.overlay { guideOverlay }
 				.overlay(alignment: .top) {
 					HStack { levelIndicator; qualityBadges }.padding(8)
 				}
@@ -21,8 +23,13 @@ struct GuidedCaptureView: View {
 			Text(instructionText)
 				.font(.headline)
 				.padding(.top, 4)
+			Toggle("必须通过质检后才能拍照", isOn: $requireQualityPass)
+				.toggleStyle(.switch)
+				.padding(.bottom, 2)
 			HStack {
-				Button("拍照") { capture() }.buttonStyle(.borderedProminent)
+				Button("拍照") { capture() }
+					.buttonStyle(.borderedProminent)
+					.disabled(!canCapture)
 				Button("重拍") { resetCurrent() }.disabled(currentImage == nil)
 			}
 			HStack {
@@ -49,6 +56,8 @@ struct GuidedCaptureView: View {
 		}
 	}
 
+	private var canCapture: Bool { !requireQualityPass || (!camera.exposureTooLow && !camera.isBlurry) }
+
 	private var currentImage: UIImage? {
 		switch step { case 0: return front; case 1: return left; default: return right }
 	}
@@ -74,6 +83,29 @@ struct GuidedCaptureView: View {
 		HStack(spacing: 6) {
 			if camera.exposureTooLow { badge("光线不足") }
 			if camera.isBlurry { badge("画面模糊") }
+		}
+	}
+
+	private var guideOverlay: some View {
+		GeometryReader { geo in
+			let w = geo.size.width
+			let h = geo.size.height
+			ZStack {
+				// 十字辅助线
+				Path { p in
+					p.move(to: CGPoint(x: w/2, y: 0)); p.addLine(to: CGPoint(x: w/2, y: h))
+					p.move(to: CGPoint(x: 0, y: h/2)); p.addLine(to: CGPoint(x: w, y: h/2))
+				}
+				.stroke(Color.white.opacity(0.25), lineWidth: 1)
+
+				// 面部轮廓遮罩（正面椭圆，侧面圆角矩形）
+				Path { p in
+					let rect = CGRect(x: w*0.2, y: h*0.15, width: w*0.6, height: h*0.7)
+					if step == 0 { p.addEllipse(in: rect) }
+					else { p.addRoundedRect(in: rect, cornerSize: CGSize(width: w*0.3, height: h*0.35)) }
+				}
+				.stroke(Color.yellow.opacity(0.35), lineWidth: 2)
+			}
 		}
 	}
 
