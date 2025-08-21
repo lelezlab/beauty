@@ -21,7 +21,12 @@ struct MainTabView: View {
 	private var home: some View { EmptyView() }
 
 	private var history: some View { Text("本地历史（SwiftData 待接入）").padding() }
-	private var settings: some View { Text("登录/订阅/通知设置（占位）").padding() }
+	private var settings: some View {
+		List {
+			NavigationLink("语言 / Language") { LanguageSettingsView() }
+			Text("登录/订阅/通知设置（占位）")
+		}
+	}
 }
 
 #Preview {

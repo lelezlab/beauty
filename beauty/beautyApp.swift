@@ -16,6 +16,7 @@ struct beautyApp: App {
     // Temporarily remove SwiftData container to simplify preview/build
 
     @StateObject private var appState = AppState()
+    @StateObject private var i18n = LocalizationManager.shared
 
     var body: some Scene {
         WindowGroup {
@@ -27,6 +28,7 @@ struct beautyApp: App {
                 }
             }
             .environmentObject(appState)
+            .environmentObject(i18n)
         }
     }
 }
