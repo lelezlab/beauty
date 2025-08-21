@@ -23,6 +23,7 @@ struct EffectsGalleryView: View {
 struct EffectDetailView: View {
     let pack: EffectPack
     @State private var controlValues: [String: Double] = [:]
+    @State private var preview: UIImage?
     @State private var realism: Int = 3
     @State private var satisfaction: Int = 3
     @State private var selectedRegions: Set<String> = []
@@ -39,8 +40,12 @@ struct EffectDetailView: View {
                         if let r = c.range, r.count == 2 { Slider(value: Binding(get: { controlValues[c.key] ?? (c.default ?? 0) }, set: { controlValues[c.key] = $0 }), in: r[0]...r[1]) }
                     }
                 }
-                // 占位预览图
-                RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)).frame(height: 220).overlay(Text("预览占位：实际渲染管线接入 EffectComposer"))
+                // 预览渲染
+                if let preview = preview {
+                    Image(uiImage: preview).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)).frame(height: 220).overlay(Text("预览渲染中/占位"))
+                }
                 Button("记录此次效果使用") {
                     let effect = BTEffectRecord(effectId: pack.id, version: pack.version, params: controlValues, confidenceScore: nil)
                     BeautyTelemetryService.shared.recordEffect(effect)
@@ -69,6 +74,21 @@ struct EffectDetailView: View {
             }
             .padding()
         }
+        .task { await recomputePreview() }
+    }
+}
+
+extension EffectDetailView {
+    func recomputePreview() async {
+        // 简化：从最近一张 front 照片或占位获取图与 landmarks（此处省略存取，示例用纯色图）
+        let size = CGSize(width: 640, height: 800)
+        UIGraphicsBeginImageContextWithOptions(size, true, 0)
+        UIColor.white.setFill(); UIRectFill(CGRect(origin: .zero, size: size))
+        let img = UIGraphicsGetImageFromCurrentImageContext() ?? UIImage()
+        UIGraphicsEndImageContext()
+        // 没有即时 landmarks 管线的上下文下以 nil 传入（EffectComposer 会回退）
+        let rendered = EffectComposer.render(image: img, pack: pack, controls: controlValues, landmarks: nil)
+        await MainActor.run { self.preview = rendered }
     }
 }
 
