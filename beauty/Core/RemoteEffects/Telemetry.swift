@@ -9,13 +9,15 @@ enum Telemetry {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let file = dir.appendingPathComponent("events.jsonl")
             let data = try JSONEncoder().encode(event)
+            let line = data + "\n".data(using: .utf8)!
             if FileManager.default.fileExists(atPath: file.path) {
-                let handle = try FileHandle(forWritingTo: file)
-                try handle.seekToEnd()
-                try handle.write(data + "\n".data(using: .utf8)!)
-                try handle.close()
+                if let handle = try? FileHandle(forWritingTo: file) {
+                    try handle.seekToEnd()
+                    try handle.write(line)
+                    try handle.close()
+                }
             } else {
-                try (data + "\n".data(using: .utf8)!).write(to: file)
+                try line.write(to: file)
             }
         } catch {
             // swallow; local only

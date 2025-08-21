@@ -15,15 +15,16 @@ enum ExportService {
             .foregroundColor: UIColor.gray.withAlphaComponent(0.7)
         ]
         let qc = BeautyTelemetryService.shared.lastQC
-        let meta = [
-            "focal": qc?.focalEq.map { String(format: "f=%.0fmm", $0) } ?? "f≈50mm",
-            "dist": qc?.distanceBucket.map { "d\($0)" } ?? "d?",
-            "yaw": qc?.yaw.map { String(format: "yaw=%.0f°", $0) } ?? "yaw?",
-            "pitch": qc?.pitch.map { String(format: "pitch=%.0f°", $0) } ?? "pitch?",
-            "roll": qc?.roll.map { String(format: "roll=%.0f°", $0) } ?? "roll?",
-            "AE": (qc?.aeLocked ?? false) ? "AE:lock" : "AE:auto",
-            "AWB": (qc?.awbLocked ?? false) ? "AWB:lock" : "AWB:auto"
-        ].values.joined(separator: "  ")
+        let metaParts: [String] = [
+            qc?.focalEq.map { String(format: "f=%.0fmm", $0) } ?? "f≈50mm",
+            qc?.distanceBucket.map { "d\($0)" } ?? "d?",
+            qc?.yaw.map { String(format: "yaw=%.0f°", $0) } ?? "yaw?",
+            qc?.pitch.map { String(format: "pitch=%.0f°", $0) } ?? "pitch?",
+            qc?.roll.map { String(format: "roll=%.0f°", $0) } ?? "roll?",
+            (qc?.aeLocked ?? false) ? "AE:lock" : "AE:auto",
+            (qc?.awbLocked ?? false) ? "AWB:lock" : "AWB:auto"
+        ]
+        let meta = metaParts.joined(separator: "  ")
         let str = NSAttributedString(string: watermark + "  " + meta, attributes: attrs)
         str.draw(at: CGPoint(x: 10, y: height - 20))
         let img = UIGraphicsGetImageFromCurrentImageContext()
