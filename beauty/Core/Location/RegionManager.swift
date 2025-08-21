@@ -16,9 +16,10 @@ final class RegionManager: NSObject, ObservableObject {
     }
 
     func request() {
-        if CLLocationManager.authorizationStatus() == .notDetermined {
+        switch manager.authorizationStatus {
+        case .notDetermined:
             manager.requestWhenInUseAuthorization()
-        } else {
+        default:
             manager.requestLocation()
         }
     }

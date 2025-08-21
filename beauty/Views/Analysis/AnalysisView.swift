@@ -47,6 +47,16 @@ struct AnalysisView: View {
 			metricBar(name: "下巴投影", value: m.chinProjectionRatio, target: 1.0, range: 0.7...1.3, format: "%.2f")
 			metricBar(name: "面宽高比", value: m.faceWidthToHeight, target: 0.75, range: 0.5...1.1, format: "%.2f")
 		}
+
+		// 简易雷达图（归一化示意）
+		let radarItems: [RadarChartView.Item] = [
+			.init(name: "三庭", value: clamp01((m.threeFacialZonesRatio-0.6)/0.8)),
+			.init(name: "五眼", value: clamp01((m.fiveEyesRatio-0.6)/0.8)),
+			.init(name: "鼻唇角", value: clamp01((Double(m.nasolabialAngleDegrees)-85.0)/35.0)),
+			.init(name: "下巴", value: clamp01((m.chinProjectionRatio-0.7)/0.6)),
+			.init(name: "宽高比", value: clamp01((m.faceWidthToHeight-0.5)/0.6))
+		]
+		RadarChartView(items: radarItems)
 	}
 
 	private func metricBar(name: String, value: Double, target: Double, range: ClosedRange<Double>, format: String) -> some View {
@@ -58,11 +68,13 @@ struct AnalysisView: View {
 				.font(.subheadline)
 			ZStack(alignment: .leading) {
 				RoundedRectangle(cornerRadius: 4).fill(Color.secondary.opacity(0.15)).frame(height: 8)
-				RoundedRectangle(cornerRadius: 4).fill(color).frame(width: CGFloat(norm)*240, height: 8)
+				RoundedRectangle(cornerRadius: 4).fill(color).frame(width: CGFloat(norm)*240.0, height: 8)
 			}
 		})
 	}
+}
 
+extension AnalysisView {
 	private var stylePresets: some View {
 		VStack(alignment: .leading, spacing: 12) {
 			Text("一键模板").font(.headline)
@@ -70,16 +82,39 @@ struct AnalysisView: View {
 				HStack {
 					ForEach(StylePreset.allCases) { preset in
 						NavigationLink(preset.rawValue.localizedCapitalized) {
-							if let l = landmarks {
-								PresetPreviewView(image: front, landmarks: l, preset: preset)
+							if let lmk = landmarks {
+								PresetPreviewView(image: front, landmarks: lmk, preset: preset)
 							}
 						}
 						.buttonStyle(.bordered)
 					}
 				}
 			}
+			// 导出
+			if let lmk = landmarks {
+				let preview = MorphingRenderer().applyPreset(.natural, to: front, landmarks: lmk)
+				Button("导出前后对比PDF") {
+					if let combo = ExportService.compositeBeforeAfter(before: front, after: preview, watermark: "beauty demo - not for medical use"),
+					   let pdf = ExportService.makePDF(from: combo, disclaimer: "本PDF仅作审美模拟参考，不构成医疗建议；请以专业医生面诊为准。") {
+						share(data: pdf, fileName: "beauty_before_after.pdf")
+					}
+				}
+			}
 		}
 	}
+}
+
+private func clamp01(_ v: Double) -> Double { max(0, min(1, v)) }
+
+private func share(data: Data, fileName: String) {
+	let tmp = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(fileName)
+	try? data.write(to: tmp)
+	let av = UIActivityViewController(activityItems: [tmp], applicationActivities: nil)
+	UIApplication.shared.connectedScenes
+		.compactMap { ($0 as? UIWindowScene)?.keyWindow }
+		.first?
+		.rootViewController?
+		.present(av, animated: true)
 }
 
 private struct LandmarksOverlay: View {

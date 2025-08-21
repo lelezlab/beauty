@@ -16,7 +16,7 @@ final class MorphingRenderer {
 
 	func applyPreset(_ preset: StylePreset, to image: UIImage, landmarks: FacialLandmarksResult) -> UIImage {
 		// Placeholder: lightweight filters to stand in for full 3D morphing
-		var filter = CIFilter(name: "CIColorControls")!
+		let filter = CIFilter(name: "CIColorControls")!
 		switch preset {
 		case .natural:
 			filter.setValue(1.05, forKey: kCIInputSaturationKey)
