@@ -16,6 +16,7 @@ struct GuidedCaptureView: View {
 			ZStack(alignment: .topTrailing) {
 				CameraPreview(sampleBuffer: $camera.sampleBuffer)
 					.overlay { guideOverlay }
+					.overlay { if FeatureFlags.goldenGuidesEnabled { GoldenGuidesOverlay().allowsHitTesting(false) } }
 				.overlay(alignment: .top) {
 					HStack { levelIndicator; qualityBadges }.padding(8)
 				}

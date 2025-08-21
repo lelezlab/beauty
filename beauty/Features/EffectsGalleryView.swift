@@ -29,6 +29,7 @@ struct EffectDetailView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(pack.display_name).font(.title3).bold()
                 Text("免责声明：仅为视觉模拟，非医疗建议。").font(.footnote).foregroundStyle(.secondary)
+                HStack { Button("一键参考黄金法则") { /* TODO: 调用 AestheticsMetrics 生成建议并映射到 controlValues */ } }
                 ForEach(pack.controls) { c in
                     VStack(alignment: .leading) {
                         HStack { Text(c.key); Spacer(); Text(String(format: "%.2f", controlValues[c.key] ?? (c.default ?? 0))) }
