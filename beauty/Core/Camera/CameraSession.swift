@@ -31,6 +31,7 @@ final class CameraSession: NSObject, ObservableObject {
 	}()
 	private let videoOutput = AVCaptureVideoDataOutput()
     private let ciContext = CIContext(options: nil)
+	private var distanceTimer: DispatchSourceTimer?
 
 	override init() {
 		super.init()
@@ -47,9 +48,38 @@ final class CameraSession: NSObject, ObservableObject {
 					AVCaptureDevice.default(for: .video) else { return }
 			guard let input = try? AVCaptureDeviceInput(device: device) else { return }
 			if self.captureSession.canAddInput(input) { self.captureSession.addInput(input) }
+			// 数据输出（用于质检/抓拍），设置像素格式
+			self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
 			self.videoOutput.setSampleBufferDelegate(self, queue: self.sessionQueue)
 			self.videoOutput.alwaysDiscardsLateVideoFrames = true
 			if self.captureSession.canAddOutput(self.videoOutput) { self.captureSession.addOutput(self.videoOutput) }
+
+			// 连接方向 / 稳定 / 前置镜像
+			if let connection = self.videoOutput.connection(with: .video) {
+				connection.videoRotationAngle = 90
+				if connection.isVideoMirroringSupported {
+					connection.automaticallyAdjustsVideoMirroring = false
+					connection.isVideoMirrored = true
+				}
+				if connection.isVideoStabilizationSupported { connection.preferredVideoStabilizationMode = .standard }
+			}
+
+			// 相机设备参数：平滑对焦、连续 AE/AWB，避免频繁区域变更；尽量稳定帧率
+			if (try? device.lockForConfiguration()) != nil {
+				device.isSubjectAreaChangeMonitoringEnabled = false
+				if device.isSmoothAutoFocusSupported { device.isSmoothAutoFocusEnabled = true }
+				if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+				if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
+				if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
+				// 将帧率稳定在 30fps（在支持范围内）
+				if let range = device.activeFormat.videoSupportedFrameRateRanges.first {
+					let target: Double = min(30.0, range.maxFrameRate)
+					let time = CMTime(value: 1, timescale: CMTimeScale(target))
+					device.activeVideoMinFrameDuration = time
+					device.activeVideoMaxFrameDuration = time
+				}
+				device.unlockForConfiguration()
+			}
 			self.captureSession.commitConfiguration()
 			// 读取设备参数（近似）
 			self.readDeviceParameters(device)
@@ -59,24 +89,30 @@ final class CameraSession: NSObject, ObservableObject {
 
 	private func readDeviceParameters(_ device: AVCaptureDevice) {
 		let fov = Double(device.activeFormat.videoFieldOfView)
-		self.fieldOfViewDegrees = fov
 		// 35mm 等效焦距近似：f ≈ 43.27 / (2*tan(FOV/2)) （对角 FOV）
 		let rad = fov * .pi / 180.0
 		let denom = 2.0 * tan(rad/2.0)
-		if denom > 0.0001 { self.focalEqMM = 43.27 / denom }
-		self.aeLocked = (device.exposureMode == .locked)
-		self.awbLocked = (device.whiteBalanceMode == .locked)
+		let focal: Double? = denom > 0.0001 ? (43.27 / denom) : nil
+		let ae = (device.exposureMode == .locked)
+		let awb = (device.whiteBalanceMode == .locked)
+		DispatchQueue.main.async { [weak self] in
+			self?.fieldOfViewDegrees = fov
+			if let focal = focal { self?.focalEqMM = focal }
+			self?.aeLocked = ae
+			self?.awbLocked = awb
+		}
 	}
 
 	private func startDistanceUpdates() {
 		let timer = DispatchSource.makeTimerSource(queue: sessionQueue)
+		self.distanceTimer = timer
 		timer.schedule(deadline: .now() + 0.5, repeating: 0.8)
 		timer.setEventHandler { [weak self] in
 			guard let self, let buffer = self.sampleBuffer, let pixel = CMSampleBufferGetImageBuffer(buffer) else { return }
 			let handler = VNImageRequestHandler(cvPixelBuffer: pixel, orientation: .up, options: [:])
 			let req = VNDetectFaceRectanglesRequest()
 			try? handler.perform([req])
-			if let first = (req.results as? [VNFaceObservation])?.first {
+			if let first = (req.results?.first as? VNFaceObservation) {
 				let h = Double(first.boundingBox.height) // 已归一化
 				let ratio = max(0.0, min(1.0, h))
 				let bucket = Self.mapCoverageToBucket(ratio)
@@ -190,13 +226,18 @@ extension CameraSession: AVCaptureVideoDataOutputSampleBufferDelegate {
 private extension CameraSession {
     func pollDeviceParams() {
         guard let device = (captureSession.inputs.first as? AVCaptureDeviceInput)?.device else { return }
-        self.aeLocked = (device.exposureMode == .locked)
-        self.awbLocked = (device.whiteBalanceMode == .locked)
+        let ae = (device.exposureMode == .locked)
+        let awb = (device.whiteBalanceMode == .locked)
         let fov = Double(device.activeFormat.videoFieldOfView)
-        self.fieldOfViewDegrees = fov
         let rad = fov * .pi / 180.0
         let denom = 2.0 * tan(rad/2.0)
-        if denom > 0.0001 { self.focalEqMM = 43.27 / denom }
+        let focal: Double? = denom > 0.0001 ? (43.27 / denom) : nil
+        DispatchQueue.main.async { [weak self] in
+            self?.aeLocked = ae
+            self?.awbLocked = awb
+            self?.fieldOfViewDegrees = fov
+            if let focal = focal { self?.focalEqMM = focal }
+        }
     }
 }
 

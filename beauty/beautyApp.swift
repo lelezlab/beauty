@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
-// import SwiftData
+import SwiftData
 import UIKit
 import AuthenticationServices
+import AVFoundation
  
 
 @main
@@ -17,6 +18,7 @@ struct beautyApp: App {
 
     @StateObject private var appState = AppState()
     @StateObject private var i18n = LocalizationManager.shared
+    @StateObject private var results = ResultsStore()
 
     var body: some Scene {
         WindowGroup {
@@ -29,6 +31,12 @@ struct beautyApp: App {
             }
             .environmentObject(appState)
             .environmentObject(i18n)
+            .environmentObject(results)
+            .task {
+                // 请求相机权限（真机首开无弹窗时主动触发）
+                _ = await AVCaptureDevice.requestAccess(for: .video)
+            }
         }
+        .modelContainer(for: [BeautySession.self])
     }
 }

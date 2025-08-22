@@ -18,7 +18,13 @@ final class EffectCenter: ObservableObject {
     func syncEffects(deviceId: String, appVersion: String, regionCode: String) async {
         guard let mf = manifest else { return }
         for s in mf.effects {
-            guard rolloutHit(deviceId: deviceId, rollout: s.rollout) else { continue }
+            let hit = rolloutHit(deviceId: deviceId, rollout: s.rollout)
+            // 记录一次遥测（配置/灰度），区分命中与否，并附加 effectId
+            let change = BTConfigChange(source: hit ? "EffectCenter.hit" : "EffectCenter.miss",
+                                        keys: ["rollout": s.rollout],
+                                        labels: ["effectId": s.id, "version": s.version])
+            BeautyTelemetryService.shared.recordConfigChange(change)
+            guard hit else { continue }
             do { try await downloadIfNeeded(summary: s, manifest: mf, appVersion: appVersion, regionCode: regionCode) } catch {
                 // TODO: log telemetry
             }
@@ -78,8 +84,11 @@ final class EffectCenter: ObservableObject {
     // MARK: - Rollout & Version helper
     private func rolloutHit(deviceId: String, rollout: Double) -> Bool {
         guard rollout < 1 else { return true }
-        let h = abs(deviceId.hashValue)
-        let p = Double(h % 10000) / 10000.0
+        // 使用稳定哈希（SHA256）确保跨进程一致
+        let hex = SignatureHelper.sha256Hex(Data(deviceId.utf8))
+        let tail = hex.suffix(8)
+        let val = UInt32(tail, radix: 16) ?? 0
+        let p = Double(val % 10000) / 10000.0
         return p < rollout
     }
 }

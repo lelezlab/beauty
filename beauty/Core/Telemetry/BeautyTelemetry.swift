@@ -16,6 +16,7 @@ public struct BTCaptureQC: Codable {
     public let distanceBucket: Int?
     public let aeLocked: Bool?
     public let awbLocked: Bool?
+    public let alignScore: Double?
 }
 
 public struct BTGeomPayload: Codable {
@@ -29,6 +30,7 @@ public struct BTMetricsPayload: Codable {
     public let nasolabialDeg: Double?
     public let chinProjection: Double?
     public let faceWH: Double?
+    public let confidence: Double?
 }
 
 public struct BTEffectRecord: Codable {
@@ -36,12 +38,35 @@ public struct BTEffectRecord: Codable {
     public let version: String
     public let params: [String: Double]
     public let confidenceScore: Double?
+    public let safety: [String: String]?
+    public let procedureId: String?
+    public let consistency: Double?
 }
 
 public struct BTRatingRecord: Codable {
     public let realism: Int?
     public let satisfaction: Int?
     public let regions: [String]?
+    public let bddScore: Int?
+}
+
+public struct BTConfigChange: Codable {
+    public let source: String // e.g., "DevTuningView", "RuntimeOverride"
+    public let keys: [String: Double] // changed numeric values (concise)
+    public var labels: [String: String]? // optional string labels (e.g., effectId)
+
+    public init(source: String, keys: [String: Double], labels: [String: String]? = nil) {
+        self.source = source
+        self.keys = keys
+        self.labels = labels
+    }
+}
+
+public struct BTPrefillRecord: Codable {
+    public let source: String // e.g., "GoldenGuides", "Procedure: nose"
+    public let procedureId: String?
+    public let weights: [String: Double]? // mapping weights used
+    public let params: [String: Double] // prefilled params
 }
 
 public struct BTSessionEnvelope: Codable {
@@ -56,17 +81,24 @@ public struct BTSessionEnvelope: Codable {
 public struct BTActionRecord: Codable { public let withPDF: Bool; public let shared: Bool; public let exported: Bool }
 public struct BTExpertAdvice: Codable { public let effectId: String; public let adviceJSON: [String: [Double]]?; public let contraindications: [String]? }
 
-public struct BTEvent: Codable {
-    public enum Kind: String, Codable { case capture, geometry, metrics, effect, rating, action, expert }
-    public let kind: Kind
-    public let session: BTSessionEnvelope
-    public let captureQC: BTCaptureQC?
-    public let geom: BTGeomPayload?
-    public let metrics: BTMetricsPayload?
-    public let effect: BTEffectRecord?
-    public let rating: BTRatingRecord?
-    public let action: BTActionRecord?
-    public let expert: BTExpertAdvice?
+struct BTEvent: Codable {
+    enum Kind: String, Codable { case capture, geometry, metrics, effect, rating, action, expert, procedure, knowledge, config, prefill }
+    let kind: Kind
+    let session: BTSessionEnvelope
+    let captureQC: BTCaptureQC?
+    let geom: BTGeomPayload?
+    let metrics: BTMetricsPayload?
+    let effect: BTEffectRecord?
+    let rating: BTRatingRecord?
+    let action: BTActionRecord?
+    let expert: BTExpertAdvice?
+    let procedure: Procedure?
+    let knowledgeKey: String?
+    let knowledgeAction: String?
+    let knowledgeDurationSec: Double?
+    let knowledgeScrollDepth: Double?
+    let config: BTConfigChange?
+    let prefill: BTPrefillRecord?
 }
 
 // MARK: - Settings / Consent
@@ -129,6 +161,7 @@ final class BeautyTelemetryService {
         return dir.appendingPathComponent("events.jsonl")
     }()
     private var sessionId: String = UUID().uuidString
+    private(set) var lastBDDScore: Int?
 
     func beginNewSession() { sessionId = UUID().uuidString }
 
@@ -145,7 +178,7 @@ final class BeautyTelemetryService {
     func recordCapture(qc: BTCaptureQC) {
         guard BeautyTelemetrySettings.telemetryEnabled else { return }
         lastQC = qc
-        let event = BTEvent(kind: .capture, session: envelope(), captureQC: qc, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: nil)
+        let event = BTEvent(kind: .capture, session: envelope(), captureQC: qc, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: nil, procedure: nil, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: nil, prefill: nil)
         persist(event)
     }
 
@@ -154,50 +187,73 @@ final class BeautyTelemetryService {
         guard let (ipd, norm) = LandmarkNormalizer.normalize(points: points) else { return }
         var geom = BTGeomPayload(ipd: ipd, points: norm)
         if BeautyTelemetrySettings.differentialPrivacyEnabled { geom = addNoise(geom) }
-        let event = BTEvent(kind: .geometry, session: envelope(), captureQC: nil, geom: geom, metrics: metrics, effect: nil, rating: nil, action: nil, expert: nil)
+        let event = BTEvent(kind: .geometry, session: envelope(), captureQC: nil, geom: geom, metrics: metrics, effect: nil, rating: nil, action: nil, expert: nil, procedure: nil, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: nil, prefill: nil)
         persist(event)
     }
 
     func recordEffect(_ record: BTEffectRecord) {
         guard BeautyTelemetrySettings.telemetryEnabled else { return }
-        let event = BTEvent(kind: .effect, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: record, rating: nil, action: nil, expert: nil)
+        let event = BTEvent(kind: .effect, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: record, rating: nil, action: nil, expert: nil, procedure: nil, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: nil, prefill: nil)
         persist(event)
     }
 
     func recordRating(_ rating: BTRatingRecord) {
         guard BeautyTelemetrySettings.telemetryEnabled else { return }
-        let event = BTEvent(kind: .rating, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: rating, action: nil, expert: nil)
+        if let s = rating.bddScore { lastBDDScore = s }
+        let event = BTEvent(kind: .rating, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: rating, action: nil, expert: nil, procedure: nil, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: nil, prefill: nil)
         persist(event)
     }
 
     func recordAction(_ action: BTActionRecord) {
         guard BeautyTelemetrySettings.telemetryEnabled else { return }
-        let event = BTEvent(kind: .action, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: action, expert: nil)
+        let event = BTEvent(kind: .action, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: action, expert: nil, procedure: nil, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: nil, prefill: nil)
         persist(event)
     }
 
     func recordExpert(_ expert: BTExpertAdvice) {
         guard BeautyTelemetrySettings.telemetryEnabled else { return }
-        let event = BTEvent(kind: .expert, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: expert)
+        let event = BTEvent(kind: .expert, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: expert, procedure: nil, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: nil, prefill: nil)
+        persist(event)
+    }
+
+    func recordProcedure(_ p: Procedure) {
+        guard BeautyTelemetrySettings.telemetryEnabled else { return }
+        let event = BTEvent(kind: .procedure, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: nil, procedure: p, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: nil, prefill: nil)
+        persist(event)
+    }
+
+    func recordKnowledge(key: String, action: String, durationSec: Double? = nil, scrollDepth: Double? = nil) {
+        guard BeautyTelemetrySettings.telemetryEnabled else { return }
+        let event = BTEvent(kind: .knowledge, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: nil, procedure: nil, knowledgeKey: key, knowledgeAction: action, knowledgeDurationSec: durationSec, knowledgeScrollDepth: scrollDepth, config: nil, prefill: nil)
+        persist(event)
+    }
+
+    func recordConfigChange(_ change: BTConfigChange) {
+        guard BeautyTelemetrySettings.telemetryEnabled else { return }
+        let event = BTEvent(kind: .config, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: nil, procedure: nil, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: change, prefill: nil)
+        persist(event)
+    }
+
+    func recordPrefill(_ prefill: BTPrefillRecord) {
+        guard BeautyTelemetrySettings.telemetryEnabled else { return }
+        let event = BTEvent(kind: .prefill, session: envelope(), captureQC: nil, geom: nil, metrics: nil, effect: nil, rating: nil, action: nil, expert: nil, procedure: nil, knowledgeKey: nil, knowledgeAction: nil, knowledgeDurationSec: nil, knowledgeScrollDepth: nil, config: nil, prefill: prefill)
         persist(event)
     }
 
     // MARK: - Persistence
     private func persist(_ event: BTEvent) {
         queue.async {
-            do {
-                let data = try JSONEncoder().encode(event)
-                if self.fileManager.fileExists(atPath: self.storeURL.path) {
-                    let handle = try FileHandle(forWritingTo: self.storeURL)
-                    try handle.seekToEnd()
-                    try handle.write(data)
-                    try handle.write("\n".data(using: .utf8)!)
-                    try handle.close()
-                } else {
-                    try (data + "\n".data(using: .utf8)!).write(to: self.storeURL)
+            guard let lineBreak = "\n".data(using: .utf8), let data = try? JSONEncoder().encode(event) else { return }
+            let fm = self.fileManager
+            if fm.fileExists(atPath: self.storeURL.path) {
+                if let handle = try? FileHandle(forWritingTo: self.storeURL) {
+                    handle.seekToEndOfFile()
+                    handle.write(data)
+                    handle.write(lineBreak)
+                    try? handle.close()
                 }
-            } catch {
-                // swallow
+            } else {
+                _ = try? (data + lineBreak).write(to: self.storeURL)
             }
         }
     }
@@ -208,6 +264,26 @@ final class BeautyTelemetryService {
 
     func deleteAll() {
         try? fileManager.removeItem(at: storeURL)
+    }
+
+    // 读取最近 N 条事件（本地预览）
+    func recentEvents(limit: Int = 20) -> [BTEvent] {
+        var url: URL = storeURL
+        // 同步以避免与写入竞争
+        queue.sync { url = self.storeURL }
+        guard let data = try? Data(contentsOf: url),
+              let text = String(data: data, encoding: .utf8) else { return [] }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: true)
+        let tail = lines.suffix(limit)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        var out: [BTEvent] = []
+        for line in tail {
+            if let d = line.data(using: .utf8), let evt = try? decoder.decode(BTEvent.self, from: d) {
+                out.append(evt)
+            }
+        }
+        return out.reversed() // 最新在前
     }
 
     // MARK: - Differential Privacy

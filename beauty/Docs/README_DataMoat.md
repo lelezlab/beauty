@@ -23,6 +23,8 @@
 ## 上传接口
 - `TelemetryUploader` 协议 + `URLTelemetryUploader(endpoint)` 实现
 - 内容类型：application/jsonl；一行一个事件（BTEvent）
+- 推荐 Edge Function（/functions/v1/ingest_telemetry）+ HMAC；App 与服务端仅共享 HMAC secret
+- Supabase PostgREST：`${SUPABASE_URL}/rest/v1/{table}`，Header：`apikey: {anon}`、`Authorization: Bearer {anon}`、`Prefer: return=minimal`，数组 JSON 批量插入。
 
 ## 阈值建议
 - 采集质量：blur<阈、exposure_mean∈区间、face_coverage>阈；姿态 |yaw/pitch/roll|<阈
@@ -33,5 +35,6 @@
 - 客户端带上 `app_version` 与 `schema_version`
 
 ## 本地调试与导出
+- RLS：参考 `server/supabase/sql/init_telemetry.sql` 启用与策略样例；生产需按用户体系收紧
 - App 设置 → 隐私与数据 → 填写 Endpoint（可用本机或 `http://localhost:8787/ingest`）
-- 导出本地样本（JSONL）或清空
+- 导出本地样本（JSONL）或清空；点击“上传现在的样本”触发批量上报（查看 201/204）。

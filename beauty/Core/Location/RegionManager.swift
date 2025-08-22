@@ -44,11 +44,13 @@ extension RegionManager: CLLocationManagerDelegate {
         guard let loc = locations.last else { return }
         geocoder.reverseGeocodeLocation(loc) { [weak self] placemarks, _ in
             guard let self, let p = placemarks?.first else { return }
-            self.countryCode = p.isoCountryCode
-            self.country = p.country
-            self.administrativeArea = p.administrativeArea
-            // some regions use locality/subLocality; prefer locality fall back to subLocality
-            self.locality = p.locality ?? p.subLocality
+            DispatchQueue.main.async { [weak self] in
+                self?.countryCode = p.isoCountryCode
+                self?.country = p.country
+                self?.administrativeArea = p.administrativeArea
+                // some regions use locality/subLocality; prefer locality fall back to subLocality
+                self?.locality = p.locality ?? p.subLocality
+            }
         }
     }
 }

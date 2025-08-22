@@ -1,0 +1,72 @@
+[
+  {
+    "id": "rhino_implant_silicone",
+    "category": "nose",
+    "name": "硅胶隆鼻",
+    "summary": "硅胶垫高鼻背并精细塑形鼻尖",
+    "principles": ["骨膜下腔隙建立", "鼻背填充抬高", "鼻尖包覆或缝合塑形"],
+    "risks": ["感染", "移位", "皮肤变薄"],
+    "contraindications": ["局部皮肤感染", "结缔组织疾病"],
+    "aftercare": ["48小时冰敷", "一周内抬高头位", "3–4周避免佩戴眼镜"],
+    "budgetNotes": ["住院及手术室费用另计", "翻修费用更高"],
+    "questionChecklist": ["假体来源与等级？", "腔隙平面与固定方式？", "皮薄如何处理鼻尖？"],
+    "recoveryDays": 14,
+    "budgetUSD": [3500, 8000],
+    "effectStability": 4,
+    "invasiveness": 3,
+    "evidenceLevel": "B"
+  },
+  {
+    "id": "rhino_goretex",
+    "category": "nose",
+    "name": "Gore-Tex 隆鼻",
+    "summary": "ePTFE 鼻背垫片，组织整合更自然",
+    "principles": ["骨膜下平面", "鼻背铺贴", "鼻尖支撑"],
+    "risks": ["感染", "取出困难"],
+    "contraindications": ["出血倾向", "严重过敏史"],
+    "aftercare": ["4周内避免捏鼻/按摩", "2周内避免剧烈运动"],
+    "budgetNotes": ["材料费用因厚度/孔隙率不同"],
+    "questionChecklist": ["厚度与孔隙率选择？", "鼻根与鼻尖如何过渡？"],
+    "recoveryDays": 14,
+    "budgetUSD": [4000, 9000],
+    "effectStability": 4,
+    "invasiveness": 3,
+    "evidenceLevel": "B"
+  },
+  {
+    "id": "rhino_autologous_cartilage",
+    "category": "nose",
+    "name": "自体软骨隆鼻",
+    "summary": "鼻中隔/耳软骨/肋软骨重建鼻背与鼻尖",
+    "principles": ["取软骨", "框架雕刻", "鼻尖投射与旋转"],
+    "risks": ["供区不适", "变形翘曲"],
+    "contraindications": ["严重胸壁畸形（取肋相对禁忌）", "重度吸烟（相对禁忌）"],
+    "aftercare": ["供区伤口护理", "瘢痕3个月硅胶贴"],
+    "budgetNotes": ["麻醉与供区增加成本", "耐久度最高"],
+    "questionChecklist": ["优先取哪个供区？", "如何预防翘曲？", "鼻尖支撑方案？"],
+    "recoveryDays": 21,
+    "budgetUSD": [7000, 15000],
+    "effectStability": 5,
+    "invasiveness": 4,
+    "evidenceLevel": "A"
+  },
+  {
+    "id": "rhino_filler_ha",
+    "category": "nose",
+    "name": "透明质酸填充隆鼻",
+    "summary": "非手术微调鼻背与鼻尖",
+    "principles": ["精准层面注射", "少量多点", "避免血管并发症"],
+    "risks": ["血管栓塞", "不对称", "吸收"],
+    "contraindications": ["妊娠期", "凝血功能障碍", "既往血管事件"],
+    "aftercare": ["48小时避免高温/桑拿", "如医嘱可轻柔按压", "2周复诊"],
+    "budgetNotes": ["与注射支数相关", "可能需要补打"],
+    "questionChecklist": ["钝针还是锐针？", "急救透明质酸酶预案？"],
+    "recoveryDays": 2,
+    "budgetUSD": [400, 1500],
+    "effectStability": 2,
+    "invasiveness": 1,
+    "evidenceLevel": "C"
+  }
+]
+
+

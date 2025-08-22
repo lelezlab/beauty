@@ -57,7 +57,7 @@ struct HomeView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAssistant) { AssistantPlaceholderView() }
+        .sheet(isPresented: $showAssistant) { AssistantTabView() }
         .sheet(isPresented: $showCart) { PlaceholderListView(title: "购物车") }
     }
 
@@ -183,27 +183,62 @@ private struct CaptureLauncherView: View {
     @State private var front: UIImage? = nil
     @State private var left: UIImage? = nil
     @State private var right: UIImage? = nil
+    @State private var showAnalysis: Bool = false
 
     var body: some View {
-        GuidedCaptureView { f, l, r in
-            front = f; left = l; right = r
-            dismiss()
+        NavigationStack {
+            if showAnalysis, let f = front {
+                AnalysisView(front: f)
+                    .navigationTitle("分析")
+                    .navigationBarTitleDisplayMode(.inline)
+            } else {
+                GuidedCaptureView { f, l, r in
+                    front = f; left = l; right = r
+                    showAnalysis = true
+                }
+                .navigationTitle("引导拍摄")
+                .navigationBarTitleDisplayMode(.inline)
+            }
         }
     }
 }
 
-private struct AssistantPlaceholderView: View {
+struct AssistantTabView: View {
+    @State private var input: String = ""
+    @State private var messages: [String] = ["你好，我是你的美学助手。请输入需求或拍摄分析后点此提问。"]
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 12) {
-                Text("AI 助手占位").font(.title2).bold()
-                Text("后续接入问答/引导购/方案咨询，与本地图像分析联动。")
-                    .foregroundStyle(.secondary)
-                Spacer()
+        VStack(spacing: 0) {
+            List(messages, id: \.self) { m in Text(m) }
+            HStack(spacing: 8) {
+                TextField("向助手提问，例如：我的鼻唇角如何优化？", text: $input)
+                    .textFieldStyle(.roundedBorder)
+                Button("发送") {
+                    guard !input.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                    messages.append("你：" + input)
+                    // 简单占位：根据关键词给出知识链接
+                    let reply = AssistantEngine.generateReply(for: input)
+                    messages.append(reply)
+                    input = ""
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .padding()
-            .navigationTitle("AI 助手")
+            .padding(10)
+            .background(.ultraThinMaterial)
         }
+        .navigationTitle("AI 助手")
+    }
+}
+
+enum AssistantEngine {
+    static func generateReply(for query: String) -> String {
+        let q = query.lowercased()
+        if q.contains("鼻") || q.contains("naso") {
+            return "助手：你可以查看知识《鼻唇角》与《鼻背直化》。建议先完成三视图拍摄以获得更精确建议。"
+        }
+        if q.contains("下巴") || q.contains("chin") {
+            return "助手：针对下巴投影，可参考《颏点后缩》知识条目，并在效果中调整 chin_projection。"
+        }
+        return "助手：已记录你的问题。当前版本提供知识检索与参数指引，后续将联动你的分析数据与术式建议。"
     }
 }
 

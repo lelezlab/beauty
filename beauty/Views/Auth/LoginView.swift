@@ -59,8 +59,19 @@ struct LoginView: View {
 						request.requestedScopes = [.fullName, .email]
 					} onCompletion: { result in
 						switch result {
-						case .success:
-							appState.login(with: "apple")
+						case .success(let authorization):
+							if let cred = authorization.credential as? ASAuthorizationAppleIDCredential {
+								let uid = cred.user
+								let email = cred.email
+								let name = [cred.fullName?.givenName, cred.fullName?.familyName].compactMap { $0 }.joined()
+								Task {
+									var ok = true
+									if let token = cred.identityToken { ok = await AuthService.verifyAppleIdentityToken(token) }
+									if ok { appState.loginApple(userId: uid, email: email, name: name.isEmpty ? nil : name) }
+								}
+							} else {
+								appState.login(with: "apple")
+							}
 						case .failure:
 							break
 						}
@@ -77,6 +88,21 @@ struct LoginView: View {
 				}
 				.buttonStyle(.borderedProminent)
 				.disabled(!canLogin)
+			}
+
+			VStack(alignment: .leading, spacing: 8) {
+				Toggle("启用匿名遥测", isOn: Binding(
+					get: { BeautyTelemetrySettings.telemetryEnabled },
+					set: { BeautyTelemetrySettings.telemetryEnabled = $0 }
+				))
+				Toggle("加入研究计划（可随时撤回）", isOn: Binding(
+					get: { BeautyTelemetrySettings.researchConsent },
+					set: { BeautyTelemetrySettings.researchConsent = $0 }
+				))
+				Toggle("差分隐私噪声", isOn: Binding(
+					get: { BeautyTelemetrySettings.differentialPrivacyEnabled },
+					set: { BeautyTelemetrySettings.differentialPrivacyEnabled = $0 }
+				))
 			}
 
 #if DEBUG
@@ -107,21 +133,44 @@ struct LoginView: View {
 	private func sendCode() {
 		guard !isSending else { return }
 		isSending = true
-		seconds = 60
-		Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { t in
-			seconds -= 1
-			if seconds <= 0 { t.invalidate(); isSending = false }
+		Task {
+			let channel = (method == .phone) ? "phone" : "email"
+			let to = (method == .phone) ? phone : email
+			let ok = await AuthService.sendOTP(to: to, channel: channel)
+			DispatchQueue.main.async {
+				if ok {
+					seconds = 60
+					Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { t in
+						seconds -= 1
+						if seconds <= 0 { t.invalidate(); isSending = false }
+					}
+					BeautyTelemetryService.shared.recordConfigChange(.init(source: "auth.otp.send.ok", keys: ["v": 1], labels: ["channel": channel]))
+				} else {
+					isSending = false
+					BeautyTelemetryService.shared.recordConfigChange(.init(source: "auth.otp.send.fail", keys: ["v": 0], labels: ["channel": channel]))
+				}
+			}
 		}
 	}
 
 	private func login() {
-		switch method {
-		case .phone:
-			appState.login(with: phone)
-		case .email:
-			appState.login(with: email)
-		case .apple:
-			break
+		Task {
+			switch method {
+			case .phone:
+				let ok = await AuthService.verifyOTP(to: phone, code: code, channel: "phone")
+				DispatchQueue.main.async {
+					if ok { appState.login(with: phone) }
+					BeautyTelemetryService.shared.recordConfigChange(.init(source: ok ? "auth.login.ok" : "auth.login.fail", keys: ["v": ok ? 1 : 0], labels: ["provider": "phone"]))
+				}
+			case .email:
+				let ok = await AuthService.verifyOTP(to: email, code: code, channel: "email")
+				DispatchQueue.main.async {
+					if ok { appState.login(with: email) }
+					BeautyTelemetryService.shared.recordConfigChange(.init(source: ok ? "auth.login.ok" : "auth.login.fail", keys: ["v": ok ? 1 : 0], labels: ["provider": "email"]))
+				}
+			case .apple:
+				break
+			}
 		}
 	}
 }

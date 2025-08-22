@@ -12,11 +12,9 @@ struct ManualEditView: View {
 
 	var body: some View {
 		VStack(spacing: 12) {
-			HStack {
-				Image(uiImage: original).resizable().scaledToFit()
-				Image(uiImage: rendered).resizable().scaledToFit()
-			}
-			.frame(height: 280)
+			// 分屏滑杆对比
+			BeforeAfterSlider(before: original, after: rendered)
+				.frame(height: 280)
 			Group {
 				slider("鼻", $nose)
 				slider("下巴", $chin)

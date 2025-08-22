@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import AVFoundation
+import SwiftData
 
 struct GuidedCaptureView: View {
 	@StateObject private var camera = CameraSession()
@@ -8,31 +9,35 @@ struct GuidedCaptureView: View {
 	@State private var left: UIImage?
 	@State private var right: UIImage?
 	@State private var step: Int = 0
-	@State private var requireQualityPass: Bool = true
+	@State private var requireQualityPass: Bool = false
+	@Environment(\.modelContext) private var modelContext
 	var onFinished: (UIImage, UIImage, UIImage) -> Void
 
 	var body: some View {
 		VStack(spacing: 12) {
 			ZStack(alignment: .topTrailing) {
-				CameraPreview(sampleBuffer: $camera.sampleBuffer)
-					.overlay { guideOverlay }
-					.overlay { if FeatureFlags.goldenGuidesEnabled { GoldenGuidesOverlay().allowsHitTesting(false) } }
+				VideoPreviewView(session: camera.captureSession)
+					.allowsHitTesting(false)
+					.overlay { guideOverlay.allowsHitTesting(false) }
+					.overlay { if FeatureFlags.goldenGuidesEnabled { GoldenGuidesOverlay(landmarks: CaptureStore.shared.frontLandmarks).allowsHitTesting(false) } }
 				.overlay(alignment: .top) {
-					HStack { levelIndicator; qualityBadges; distanceHint }.padding(8)
+					HStack { levelIndicator; qualityBadges; distanceHint; alignScore; confidenceTag }
+						.padding(8)
+						.allowsHitTesting(false)
 				}
+				// 底部浮层工具条，确保可点击
+				.overlay(alignment: .bottom) { bottomToolbar }
 			}
 			Text(instructionText)
 				.font(.headline)
 				.padding(.top, 4)
+			// 原位置保留但隐藏，避免布局大改动
 			Toggle("必须通过质检后才能拍照", isOn: $requireQualityPass)
 				.toggleStyle(.switch)
 				.padding(.bottom, 2)
-			HStack {
-				Button("拍照") { capture() }
-					.buttonStyle(.borderedProminent)
-					.disabled(!canCapture)
-				Button("重拍") { resetCurrent() }.disabled(currentImage == nil)
-			}
+				.hidden()
+			HStack { Button("拍照") { capture() }; Button("重拍") { resetCurrent() } }.hidden()
+			if !canCapture { HStack { Text(gateReason); Button("强制拍照") { capture() } }.hidden() }
 			HStack {
 				thumbnail(front)
 				thumbnail(left)
@@ -40,11 +45,9 @@ struct GuidedCaptureView: View {
 			}
 			.padding(.top, 8)
 			if front != nil && left != nil && right != nil {
-				Button("完成") {
-					onFinished(front!, left!, right!)
-				}
-				.buttonStyle(.borderedProminent)
-				.padding(.top, 6)
+				Text("已完成拍摄，点击底部“完成”进入分析")
+					.font(.subheadline)
+					.foregroundStyle(.secondary)
 			}
 		}
 	}
@@ -58,6 +61,51 @@ struct GuidedCaptureView: View {
 	}
 
 	private var canCapture: Bool { !requireQualityPass || (!camera.exposureTooLow && !camera.isBlurry) }
+
+	private var gateReason: String {
+		var reasons: [String] = []
+		if camera.exposureTooLow { reasons.append("光线不足") }
+		if camera.isBlurry { reasons.append("画面模糊") }
+		return reasons.isEmpty ? "质检未通过" : reasons.joined(separator: " / ")
+	}
+
+	@ViewBuilder private var bottomToolbar: some View {
+		VStack(spacing: 8) {
+			if !canCapture {
+				HStack(spacing: 8) {
+					Text(gateReason).font(.caption).foregroundStyle(.secondary)
+					Spacer()
+					Button("强制拍照") { capture() }.buttonStyle(.bordered)
+				}
+			}
+			HStack(spacing: 12) {
+				Toggle("必须通过质检后才能拍照", isOn: $requireQualityPass)
+					.toggleStyle(.switch)
+				Spacer()
+				Button("重拍") { resetCurrent() }
+					.disabled(currentImage == nil)
+				Button("拍照") { capture() }
+					.buttonStyle(.borderedProminent)
+					.disabled(!canCapture)
+			}
+			if front != nil && left != nil && right != nil {
+				Button("完成") {
+					onFinished(front!, left!, right!)
+					CaptureStore.shared.saveSession(front: front!, left: left!, right: right!)
+					let s = BeautySession(frontImage: front, leftImage: left, rightImage: right)
+					modelContext.insert(s)
+				}
+				.buttonStyle(.borderedProminent)
+			}
+		}
+		.padding(.horizontal, 12)
+		.padding(.top, 8)
+		.padding(.bottom, 12)
+		.frame(maxWidth: .infinity)
+		.background(.ultraThinMaterial)
+		.ignoresSafeArea(edges: .bottom)
+		.zIndex(1000)
+	}
 
 	private var currentImage: UIImage? {
 		switch step { case 0: return front; case 1: return left; default: return right }
@@ -76,10 +124,21 @@ struct GuidedCaptureView: View {
 			focalEq: camera.focalEqMM,
 			distanceBucket: estimateDistanceBucket(),
 			aeLocked: camera.aeLocked,
-			awbLocked: camera.awbLocked
+			awbLocked: camera.awbLocked,
+			alignScore: computeAlignScore()
 		)
 		BeautyTelemetryService.shared.recordCapture(qc: qc)
-		switch step { case 0: front = image; CaptureStore.shared.frontImage = image; case 1: left = image; default: right = image }
+		switch step {
+		case 0:
+			front = image; CaptureStore.shared.frontImage = image
+			Task { if let lmk = try? await FaceAnalyzer().detectLandmarks(in: image) { CaptureStore.shared.frontLandmarks = lmk } }
+		case 1:
+			left = image; CaptureStore.shared.leftImage = image
+			Task { if let lmk = try? await FaceAnalyzer().detectLandmarks(in: image) { CaptureStore.shared.leftLandmarks = lmk } }
+		default:
+			right = image; CaptureStore.shared.rightImage = image
+			Task { if let lmk = try? await FaceAnalyzer().detectLandmarks(in: image) { CaptureStore.shared.rightLandmarks = lmk } }
+		}
 		step = min(step + 1, 2)
 	} }
 
@@ -116,6 +175,48 @@ struct GuidedCaptureView: View {
 			.padding(6)
 			.background(Color.blue.opacity(0.8), in: Capsule())
 			.foregroundStyle(.white)
+	}
+
+	private var alignScore: some View {
+		let score = computeAlignScore()
+		return VStack(alignment: .leading) {
+			Text(String(format: "对齐 %.0f%%", score*100)).font(.caption2)
+			ZStack(alignment: .leading) {
+				RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.25)).frame(width: 70, height: 6)
+				RoundedRectangle(cornerRadius: 3).fill(Color.green).frame(width: 70*score, height: 6)
+			}
+		}
+		.padding(6)
+		.background(.ultraThinMaterial, in: Capsule())
+	}
+
+	private var confidenceTag: some View {
+		let qc = BTCaptureQC(
+			blurScore: camera.isBlurry ? 1.0 : 0.0,
+			exposureMean: camera.exposureTooLow ? 0.1 : 0.6,
+			faceCoverage: 0.6,
+			yaw: Double(camera.levelDegrees),
+			pitch: nil,
+			roll: nil,
+			focalEq: camera.focalEqMM,
+			distanceBucket: estimateDistanceBucket(),
+			aeLocked: camera.aeLocked,
+			awbLocked: camera.awbLocked,
+			alignScore: computeAlignScore()
+		)
+		let c = ConfidenceEstimator.score(from: qc)
+		return Text(String(format: "可信度 %.0f%%", c*100))
+			.font(.caption2)
+			.padding(6)
+			.background(Color.green.opacity(0.85), in: Capsule())
+			.foregroundStyle(.white)
+	}
+
+	private func computeAlignScore() -> Double {
+		let angleScore = max(0, 1 - abs(camera.levelDegrees)/10.0)
+		let distScore = 1 - abs(Double(camera.distanceBucket) - 3)/2.0
+		let expoScore = camera.exposureTooLow ? 0.5 : 1.0
+		return max(0.0, min(1.0, 0.5*angleScore + 0.3*distScore + 0.2*expoScore))
 	}
 
 	private var guideOverlay: some View {
@@ -159,21 +260,30 @@ struct GuidedCaptureView: View {
 	}
 }
 
-private struct CameraPreview: UIViewRepresentable {
-	@Binding var sampleBuffer: CMSampleBuffer?
+private struct VideoPreviewView: UIViewRepresentable {
+	let session: AVCaptureSession
 
-	func makeUIView(context: Context) -> UIImageView { let v = UIImageView(); v.contentMode = .scaleAspectFit; v.backgroundColor = .black; return v }
-	func updateUIView(_ uiView: UIImageView, context: Context) {
-		guard let buffer = sampleBuffer, let image = imageFrom(buffer) else { return }
-		uiView.image = image
+	func makeUIView(context: Context) -> PreviewUIView { PreviewUIView() }
+
+	func updateUIView(_ uiView: PreviewUIView, context: Context) {
+		uiView.setSession(session)
 	}
-	private func imageFrom(_ buffer: CMSampleBuffer) -> UIImage? {
-		guard let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return nil }
-		let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-		let context = CIContext(options: nil)
-		guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
-		return UIImage(cgImage: cgImage)
+
+	final class PreviewUIView: UIView {
+		override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+		var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+		func setSession(_ session: AVCaptureSession) {
+			previewLayer.session = session
+			previewLayer.videoGravity = .resizeAspect
+			// 方向与镜像在连接处已设置，这里确保 portrait
+			if let connection = previewLayer.connection {
+				connection.videoRotationAngle = 90
+				if connection.isVideoMirroringSupported {
+					connection.automaticallyAdjustsVideoMirroring = false
+					connection.isVideoMirrored = true
+				}
+			}
+		}
 	}
 }
-
 

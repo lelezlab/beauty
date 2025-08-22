@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct ResultsDashboardView: View {
-    // 输入：可从分析页传入，也可为空则显示示例/占位
+    // 输入：也可从全局结果存储读取
     let metrics: AestheticsMetrics?
     let suggestions: [Suggestion]
+    @EnvironmentObject private var results: ResultsStore
 
     @State private var selectedTab: String = "总览"
     private let tabs = ["总览", "毛孔", "皱纹", "敏感", "下垂", "浮肿", "骨肉比", "变美推荐"]
@@ -14,7 +15,7 @@ struct ResultsDashboardView: View {
                 tabsBar
                 scoreGauge
                 metricBars
-                if !suggestions.isEmpty { topSolutions }
+                if !activeSuggestions.isEmpty { topSolutions }
             }
             .padding()
         }
@@ -51,7 +52,7 @@ struct ResultsDashboardView: View {
     private var metricBars: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("关键维度").font(.headline)
-            if let m = metrics {
+            if let m = activeMetrics {
                 bar("三庭", value: normalize(m.threeFacialZonesRatio, 0.6, 1.4))
                 bar("五眼", value: normalize(m.fiveEyesRatio, 0.6, 1.4))
                 bar("鼻唇角", value: normalize(m.nasolabialAngleDegrees, 85, 120))
@@ -66,7 +67,7 @@ struct ResultsDashboardView: View {
     private var topSolutions: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("TOP 推荐方案").font(.headline)
-            ForEach(suggestions.prefix(3)) { s in
+            ForEach(activeSuggestions.prefix(3)) { s in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(s.title).bold()
                     Text(s.reason).font(.caption).foregroundStyle(.secondary)
@@ -93,7 +94,7 @@ struct ResultsDashboardView: View {
     }
 
     private func overallScore() -> Double {
-        guard let m = metrics else { return 60 }
+        guard let m = activeMetrics else { return 60 }
         let components = [
             normalize(m.threeFacialZonesRatio, 0.6, 1.4),
             normalize(m.fiveEyesRatio, 0.6, 1.4),
@@ -104,6 +105,9 @@ struct ResultsDashboardView: View {
         let avg = components.map { max(0, min(1, $0)) }.reduce(0, +) / Double(components.count)
         return avg * 100
     }
+
+    private var activeMetrics: AestheticsMetrics? { metrics ?? results.lastMetrics }
+    private var activeSuggestions: [Suggestion] { suggestions.isEmpty ? results.lastSuggestions : suggestions }
 }
 
 

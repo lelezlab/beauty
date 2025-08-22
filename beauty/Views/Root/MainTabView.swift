@@ -16,6 +16,9 @@ struct MainTabView: View {
 			NavigationStack { HomeView() }
 				.tabItem { Label("首页", systemImage: "sparkles") }
 				.tag(1)
+			NavigationStack { AssistantTabView() }
+				.tabItem { Label("助手", systemImage: "message.badge.waveform") }
+				.tag(5)
 			NavigationStack { EffectsGalleryView() }
 				.tabItem { Label("效果", systemImage: "wand.and.stars") }
 				.tag(2)
@@ -30,12 +33,15 @@ struct MainTabView: View {
 
 	private var home: some View { EmptyView() }
 
-	private var history: some View { Text("本地历史（SwiftData 待接入）").padding() }
+	private var history: some View { HistoryView() }
 	private var settings: some View {
 		List {
 			NavigationLink("语言 / Language") { LanguageSettingsView() }
 			NavigationLink("合规与底线") { ComplianceView().environmentObject(PrivacyManager.shared) }
 			NavigationLink("隐私与数据") { PrivacyDataView() }
+			NavigationLink("开发者参数（黄金法则映射）") { DevTuningView() }
+			NavigationLink("知识库（远程）") { KnowledgeBrowserView() }
+			NavigationLink("BDD 自评") { BDDSelfAssessmentView() }
 			Text("登录/订阅/通知设置（占位）")
 		}
 	}

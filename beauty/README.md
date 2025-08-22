@@ -172,7 +172,9 @@
   - ✅ 相机预览/拍照/质量提示/水平仪（`CameraSession`）
   - ✅ 关键点检测与指标计算（`FaceAnalyzer`/`AestheticsMetrics`）
   - ✅ 预设渲染预览（`MorphingRenderer`）
-  - 🟡 手动编辑交互（控制点/撤销重做）
+  - ✅ 手动编辑交互（控制点/撤销重做/分屏对比）
+  - ✅ 黄金比例面罩叠加（基于 landmarks 自适应 + 可调系数）
+  - ✅ 术式→效果参数自动预填（含三视图一致性评分与安全阈值提示）
   - 📝 SwiftData 持久化（会话/图片/分析 JSON）
 - 首页与导航
   - ✅ Tab 与基础路由（`MainTabView`）

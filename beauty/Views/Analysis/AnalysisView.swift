@@ -7,6 +7,8 @@ struct AnalysisView: View {
 	@State private var metrics: AestheticsMetrics?
 	@State private var isLoading = false
 	@State private var suggestions: [Suggestion] = []
+	@EnvironmentObject private var results: ResultsStore
+    @State private var showGoldenMask: Bool = false
 
 	var body: some View {
 		ScrollView {
@@ -14,9 +16,43 @@ struct AnalysisView: View {
 				ZStack(alignment: .topLeading) {
 					Image(uiImage: front).resizable().scaledToFit().cornerRadius(8)
 					if let l = landmarks { LandmarksOverlay(landmarks: l).padding(8) }
+                    if showGoldenMask { GoldenGuidesOverlay(landmarks: landmarks, metrics: metrics).padding(8) }
 				}
 				if let m = metrics { metricsSection(m) }
 				if !suggestions.isEmpty { suggestionsSection }
+                Toggle("叠加黄金比例面罩", isOn: $showGoldenMask)
+				NavigationLink("心理健康守护 / BDD 自评") { BDDSelfAssessmentView() }
+				NavigationLink("查看隆鼻术式选项") { ProcedureListView(category: "nose") }
+				if let m = metrics {
+					// 快速查看差异摘要
+					VStack(alignment: .leading, spacing: 6) {
+						Text("关键差异摘要").font(.headline)
+						Text(String(format: "三庭 %.2f → 1.00", m.threeFacialZonesRatio)).font(.caption).monospaced()
+						Text(String(format: "五眼 %.2f → 1.00", m.fiveEyesRatio)).font(.caption).monospaced()
+						Text(String(format: "鼻唇角 %.1f° → 103°", m.nasolabialAngleDegrees)).font(.caption).monospaced()
+						Text(String(format: "下巴投影 %.2f → 1.00", m.chinProjectionRatio)).font(.caption).monospaced()
+						Text(String(format: "宽高比 %.2f → 0.75", m.faceWidthToHeight)).font(.caption).monospaced()
+						// 可操作的调整量（估算）
+						let chinDeltaPct = max(0, 1.0 - m.chinProjectionRatio)
+						let fiveEyesDeltaPct = max(0, 1.0 - m.fiveEyesRatio)
+						Text(String(format: "建议：下巴前移约 %.0f%%；双眼（含留白）收敛约 %.0f%%", chinDeltaPct*100, fiveEyesDeltaPct*100))
+							.font(.caption2)
+							.foregroundStyle(.orange)
+						// 以当前 IPD 估算 mm（仅提示）
+						let ipdPx: Double = {
+							guard let l = landmarks,
+							      let lp = l.points["left_eye"]?.first,
+							      let rp = l.points["right_eye"]?.first else { return 0 }
+							return Double(hypot(lp.x - rp.x, lp.y - rp.y))
+						}()
+						let ipdMM = UserDefaults.standard.object(forKey: "gm_ipd_mm") as? Double ?? 63.0
+						let chinMM = chinDeltaPct * ipdMM
+						let fiveMM = fiveEyesDeltaPct * ipdMM
+						Text(String(format: "约需：下巴 %.1fmm；五眼 %.1fmm（基于 IPD=%.0fmm）", chinMM, fiveMM, ipdMM))
+							.font(.caption2)
+							.foregroundStyle(.secondary)
+					}
+				}
 				stylePresets
 			}
 			.padding()
@@ -35,21 +71,36 @@ struct AnalysisView: View {
 			CaptureStore.shared.frontLandmarks = l
 			let m = MetricsCalculator.compute(from: l, imageSize: front.size)
 			metrics = m
+			let conf = ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.2, exposureMean: 0.6, faceCoverage: 0.6, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))
 			let mp = BTMetricsPayload(
 				threeZones: Double(m.threeFacialZonesRatio),
 				fiveEyes: Double(m.fiveEyesRatio),
 				nasolabialDeg: Double(m.nasolabialAngleDegrees),
 				chinProjection: Double(m.chinProjectionRatio),
-				faceWH: Double(m.faceWidthToHeight)
+				faceWH: Double(m.faceWidthToHeight),
+				confidence: conf
 			)
 			BeautyTelemetryService.shared.recordGeometry(points: l.points, metrics: mp)
-			suggestions = SuggestionsEngine.generate(from: m)
+			// 使用更精确的评估映射
+			let assess = AestheticsAssessor.assess(metrics: m)
+			let sug = assess.items.map { item in
+				Suggestion(title: item.key, reason: String(format: "偏差: %.2f", item.delta), knowledgeKey: item.key)
+			}
+			self.suggestions = sug
+			results.update(metrics: m, suggestions: sug)
 		}
 	}
 
 	@ViewBuilder private func metricsSection(_ m: AestheticsMetrics) -> some View {
 		VStack(alignment: .leading, spacing: 8) {
-			Text("三庭五眼与关键指标").font(.headline)
+			HStack {
+				Text("三庭五眼与关键指标").font(.headline)
+				Spacer()
+				if let qc = BeautyTelemetryService.shared.lastQC {
+					let c = ConfidenceEstimator.score(from: qc)
+					Text(String(format: "可信度 %.0f%%", c*100)).font(.caption).padding(6).background(Color.green.opacity(0.85), in: Capsule()).foregroundStyle(.white)
+				}
+			}
 			metricBar(name: "三庭综合比", value: m.threeFacialZonesRatio, target: 1.0, range: 0.6...1.4, format: "%.2f")
 			metricBar(name: "五眼比例", value: m.fiveEyesRatio, target: 1.0, range: 0.6...1.4, format: "%.2f")
 			metricBar(name: "鼻唇角(°)", value: m.nasolabialAngleDegrees, target: 103, range: 85...120, format: "%.1f")
@@ -103,8 +154,30 @@ extension AnalysisView {
 			if let lmk = landmarks {
 				let preview = MorphingRenderer().applyPreset(.natural, to: front, landmarks: lmk)
 				Button("导出前后对比PDF") {
-					if let combo = ExportService.compositeBeforeAfter(before: front, after: preview, watermark: "beauty demo - not for medical use"),
-					   let pdf = ExportService.makePDF(from: combo, disclaimer: "本PDF仅作审美模拟参考，不构成医疗建议；请以专业医生面诊为准。") {
+					let chosen: Procedure? = CaptureStore.shared.selectedProcedure
+					let region = RegionManager().displayName
+					let mp: BTMetricsPayload? = {
+						if let m = metrics {
+							let conf = ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.2, exposureMean: 0.6, faceCoverage: 0.6, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))
+							return BTMetricsPayload(
+								threeZones: Double(m.threeFacialZonesRatio),
+								fiveEyes: Double(m.fiveEyesRatio),
+								nasolabialDeg: Double(m.nasolabialAngleDegrees),
+								chinProjection: Double(m.chinProjectionRatio),
+								faceWH: Double(m.faceWidthToHeight),
+								confidence: conf
+							)
+						}
+						return nil
+					}()
+					let cons: Double? = {
+						let fl = CaptureStore.shared.frontLandmarks
+						let ll = CaptureStore.shared.leftLandmarks
+						let rl = CaptureStore.shared.rightLandmarks
+						return MultiViewMorpher.consistencyScore(front: fl, left: ll, right: rl)
+					}()
+					if let combo = ExportService.compositeBeforeAfter(before: front, after: preview, watermark: "beauty demo - not for medical use", layout: .vertical, showAB: true, regionText: region),
+					   let pdf = ExportService.makePDF(from: combo, disclaimer: "本PDF仅作审美模拟参考，不构成医疗建议；请以专业医生面诊为准。", procedure: chosen, metrics: mp, location: region, timestamp: Date(), bddScore: BeautyTelemetryService.shared.lastBDDScore, consistency: cons) {
 						share(data: pdf, fileName: "beauty_before_after.pdf")
 					}
 				}
@@ -147,24 +220,24 @@ private struct LandmarksOverlay: View {
 }
 
 private struct KnowledgeDetailPlaceholder: View {
-	let key: String
-	var body: some View {
-		let article = KnowledgeBase.article(for: key)
-		return ScrollView {
-			VStack(alignment: .leading, spacing: 12) {
-				Text(article?.title ?? "知识点").font(.title3).bold()
-				if let s = article?.summary { Text(s).foregroundStyle(.secondary) }
-				ForEach(article?.sections ?? [], id: \.heading) { section in
-					VStack(alignment: .leading, spacing: 6) {
-						Text(section.heading).bold()
-						Text(section.body)
-					}
-				}
-			}
-			.padding()
-		}
-		.navigationTitle("知识库")
-	}
+    let key: String
+    var body: some View {
+        let article = KnowledgeBase.article(for: key)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(article?.title ?? "知识点").font(.title3).bold()
+                if let s = article?.summary { Text(s).foregroundStyle(.secondary) }
+                ForEach(article?.sections ?? [], id: \.heading) { section in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(section.heading).bold()
+                        Text(section.body)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("知识库")
+    }
 }
 
 private extension AnalysisView {
@@ -176,6 +249,11 @@ private extension AnalysisView {
 					Text(s.title).bold()
 					Text(s.reason).font(.caption).foregroundStyle(.secondary)
 					NavigationLink("查看对应知识点") { KnowledgeDetailPlaceholder(key: s.knowledgeKey) }
+					Button("记录查看") { BeautyTelemetryService.shared.recordKnowledge(key: s.knowledgeKey, action: "open_from_suggestion") }
+					NavigationLink("在知识库中打开") { KnowledgeDetailView(article: KnowledgeBase.article(for: s.knowledgeKey) ?? KnowledgeArticle(key: s.knowledgeKey, title: s.title, summary: s.reason, sections: [])) }
+					if let dest = ProcedureSimulationRouter.destination(forKey: s.knowledgeKey) {
+						NavigationLink("去术后模拟") { dest }
+					}
 				}
 				.padding(10)
 				.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))

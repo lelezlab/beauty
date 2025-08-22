@@ -41,10 +41,10 @@ struct HomeConfig: Codable {
     )
 }
 
-struct BannerItem: Codable, Identifiable { let id = UUID(); let title: String; let subtitle: String }
-struct CategoryItem: Codable, Identifiable { let id = UUID(); let title: String; let symbol: String }
-struct FeaturedItem: Codable, Identifiable { let id = UUID(); let title: String; let subtitle: String; let symbol: String }
-struct QuickActionItem: Codable, Identifiable { let id = UUID(); let title: String; let symbol: String }
+struct BannerItem: Codable, Identifiable { var id: UUID = UUID(); let title: String; let subtitle: String }
+struct CategoryItem: Codable, Identifiable { var id: UUID = UUID(); let title: String; let symbol: String }
+struct FeaturedItem: Codable, Identifiable { var id: UUID = UUID(); let title: String; let subtitle: String; let symbol: String }
+struct QuickActionItem: Codable, Identifiable { var id: UUID = UUID(); let title: String; let symbol: String }
 
 enum HomeConfigLoader {
     static func loadFromBundle() -> HomeConfig? {
