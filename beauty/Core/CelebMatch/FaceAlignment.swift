@@ -47,8 +47,8 @@ enum FaceAlignment {
 @inline(__always) func det(_ m: double2x2) -> Double { m[0,0]*m[1,1] - m[0,1]*m[1,0] }
 func svd2x2(_ m: double2x2, _ U: inout double2x2, _ S: inout SIMD2<Double>, _ V: inout double2x2) {
     let a=m[0,0], b=m[0,1], c=m[1,0], d=m[1,1]
-    let ATA = double2x2(SIMD2<Double>(a*a+c*c, a*b+c*d),
-                        SIMD2<Double>(a*b+c*d, b*b+d*d))
+    let ATA = double2x2(columns: (SIMD2<Double>(a*a+c*c, a*b+c*d),
+                                  SIMD2<Double>(a*b+c*d, b*b+d*d)))
     let tr = ATA[0,0]+ATA[1,1]
     let detA = ATA[0,0]*ATA[1,1]-ATA[0,1]*ATA[1,0]
     let tmp = sqrt(max(0,tr*tr/4 - detA))
@@ -59,8 +59,8 @@ func svd2x2(_ m: double2x2, _ U: inout double2x2, _ S: inout SIMD2<Double>, _ V:
     if hypot(v0.x, v0.y) < 1e-9 { v0 = SIMD2<Double>(1,0) }
     v0 /= simd_length(v0)
     let v1 = SIMD2<Double>(-v0.y, v0.x)
-    V = double2x2(SIMD2<Double>(v0.x, v0.y), SIMD2<Double>(v1.x, v1.y))
-    let VinvS = double2x2(SIMD2<Double>(v0.x/s1, v0.y/s1), SIMD2<Double>(v1.x/s2, v1.y/s2))
+    V = double2x2(columns: (SIMD2<Double>(v0.x, v0.y), SIMD2<Double>(v1.x, v1.y)))
+    let VinvS = double2x2(columns: (SIMD2<Double>(v0.x/s1, v0.y/s1), SIMD2<Double>(v1.x/s2, v1.y/s2)))
     U = m * VinvS
 }
 
