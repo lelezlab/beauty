@@ -43,6 +43,8 @@ struct MainTabView: View {
 			NavigationLink("合规与底线") { ComplianceView().environmentObject(PrivacyManager.shared) }
 			NavigationLink("隐私与数据") { PrivacyDataView() }
 			NavigationLink("开发者参数（黄金法则映射）") { DevTuningView() }
+			NavigationLink("Diagnostics") { DiagnosticsView() }
+			NavigationLink("About") { AboutView() }
 			NavigationLink("知识库（远程）") { KnowledgeBrowserView() }
 			NavigationLink("BDD 自评") { BDDSelfAssessmentView() }
 			Text("登录/订阅/通知设置（占位）")
