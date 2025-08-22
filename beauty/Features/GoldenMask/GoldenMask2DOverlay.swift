@@ -23,7 +23,8 @@ struct GoldenMask2DOverlay: View {
                 // 若有曲线定义，按锚点连线并根据端点偏差着色
                 if let curves = spec?.curves {
                     let arr = Array(curves)
-                    ForEach(0..<arr.count, id: \.self) { i in
+                    let idxs = Array(arr.indices)
+                    ForEach(idxs, id: \.self) { i in
                         let c = arr[i]
                         var avg: Double = 0; var count: Double = 0
                         var pts: [CGPoint] = []
