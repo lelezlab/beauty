@@ -1,6 +1,9 @@
 import SwiftUI
+import AVFoundation
+import UIKit
 
 struct FaceVideoCaptureView: View {
+    @StateObject private var camera = CameraSession()
     @State private var phase: FaceVideoCaptureController.Phase = .front
     @State private var progress: Double = 0
     @State private var front: UIImage?
@@ -13,9 +16,14 @@ struct FaceVideoCaptureView: View {
     var body: some View {
         VStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.15))
+                VideoPreviewView(session: camera.captureSession)
                     .frame(height: 320)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 Text(instruction).font(.headline)
+                    .padding(6)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.top, 8)
+                    .frame(maxHeight: .infinity, alignment: .top)
             }
             ProgressView(value: progress)
             HStack {
@@ -47,4 +55,30 @@ struct FaceVideoCaptureView: View {
     }
 }
 
+
+private struct VideoPreviewView: UIViewRepresentable {
+    let session: AVCaptureSession
+
+    func makeUIView(context: Context) -> PreviewUIView { PreviewUIView() }
+
+    func updateUIView(_ uiView: PreviewUIView, context: Context) {
+        uiView.setSession(session)
+    }
+
+    final class PreviewUIView: UIView {
+        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+        var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+        func setSession(_ session: AVCaptureSession) {
+            previewLayer.session = session
+            previewLayer.videoGravity = .resizeAspectFill
+            if let connection = previewLayer.connection {
+                connection.videoRotationAngle = 90
+                if connection.isVideoMirroringSupported {
+                    connection.automaticallyAdjustsVideoMirroring = false
+                    connection.isVideoMirrored = true
+                }
+            }
+        }
+    }
+}
 

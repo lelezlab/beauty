@@ -91,10 +91,19 @@ private struct CaptureModeSwitcher: View {
             if useVideo {
                 FaceVideoCaptureView { f, l, r in
                     front = f; left = l; right = r; goAnalysis = true
+                    // 完成三帧后触发 3D 重建（占位后台）；若 QC 不足则优雅降级
+                    let qcOK = (ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.3, exposureMean: 0.6, faceCoverage: 0.5, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))) >= 0.5
+                    if qcOK {
+                        Task { _ = await ReconstructionOrchestrator.shared.reconstruct(backend: .arkit) }
+                    }
                 }
             } else {
                 GuidedCaptureView { f, l, r in
                     front = f; left = l; right = r; goAnalysis = true
+                    let qcOK = (ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.3, exposureMean: 0.6, faceCoverage: 0.5, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))) >= 0.5
+                    if qcOK {
+                        Task { _ = await ReconstructionOrchestrator.shared.reconstruct(backend: .arkit) }
+                    }
                 }
             }
         }

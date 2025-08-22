@@ -12,6 +12,8 @@ final class CaptureStore {
     var rightImage: UIImage?
     var leftLandmarks: FacialLandmarksResult?
     var rightLandmarks: FacialLandmarksResult?
+    // 最近一次 3D 重建结果（占位）
+    var lastMesh: FaceMesh3D?
 
     // 本地历史记录
     struct CaptureRecord: Codable, Identifiable {
