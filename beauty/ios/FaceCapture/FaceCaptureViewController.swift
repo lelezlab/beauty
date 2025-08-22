@@ -29,6 +29,7 @@ final class FaceCaptureViewController: UIViewController, ARSessionDelegate {
       // Non-TrueDepth devices: keep only camera preview from other flows; overlay still shows guides
       sceneView.isHidden = true
       host.view.isHidden = false
+      // TODO: show a banner to guide tri-view capture
     }
   }
 
@@ -55,6 +56,8 @@ final class FaceCaptureViewController: UIViewController, ARSessionDelegate {
   }
 
   func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
-    // Placeholder: metrics computation is handled elsewhere; AR keeps tracking for stability.
+    if let fa = anchors.compactMap({ $0 as? ARFaceAnchor }).first {
+      ARFaceGeometryCache.shared.update(from: fa)
+    }
   }
 }

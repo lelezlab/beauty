@@ -50,9 +50,11 @@ final class ReconstructionOrchestrator {
             var mesh = try await prov.reconstruct(from: bundle)
             mesh.mmPerPixel = mesh.mmPerPixel ?? CalibrationManager.shared.state.scaleMMPerPixel
             CaptureStore.shared.lastMesh = mesh
+            UserDefaults.standard.set(true, forKey: "last_recon_ok")
             return mesh
         } catch {
             print("reconstruct error: \(error)")
+            UserDefaults.standard.set(false, forKey: "last_recon_ok")
             return nil
         }
     }

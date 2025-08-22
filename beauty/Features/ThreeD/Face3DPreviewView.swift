@@ -1,4 +1,5 @@
 import SwiftUI
+import SceneKit
 
 struct Face3DPreviewView: View {
     @State private var meshAvailable: Bool = CaptureStore.shared.lastMesh != nil
@@ -13,14 +14,17 @@ struct Face3DPreviewView: View {
     var body: some View {
         VStack(spacing: 12) {
             if meshAvailable, let m = CaptureStore.shared.lastMesh {
-                GoldenMask3DOverlay(mesh: m, t1: Float(t1), t2: Float(t2), alpha: Float(alpha))
+                SceneView(scene: makeScene(from: m), options: [.allowsCameraControl, .autoenablesDefaultLighting])
                     .frame(height: 320)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.secondary.opacity(0.1))
-                    .frame(height: 220)
-                    .overlay(Text("暂无 3D 网格，点击下方生成或先在‘面诊→动态’完成三帧采集").font(.footnote).foregroundStyle(.secondary).padding())
+                VStack(spacing: 8) {
+                    Text("暂无人脸网格").font(.headline)
+                    Text("请使用带 Face ID 的机型录制；若无 TrueDepth，请开启三视图重建。").font(.footnote).foregroundStyle(.secondary)
+                }
+                .frame(height: 220)
+                .frame(maxWidth: .infinity)
+                .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
             }
             HStack {
                 Button(meshAvailable ? "重新生成" : "生成 3D 预览") {
@@ -57,6 +61,34 @@ struct Face3DPreviewView: View {
         defer { isComputing = false }
         let _ = await ReconstructionOrchestrator.shared.reconstruct(backend: .arkit)
         await MainActor.run { meshAvailable = CaptureStore.shared.lastMesh != nil }
+    }
+
+    private func makeScene(from mesh: FaceMesh3D) -> SCNScene {
+        let scene = SCNScene()
+        let node = SCNNode()
+        let verts = mesh.vertices.map { SCNVector3($0.x/1000.0, $0.y/1000.0, $0.z/1000.0) }
+        let vsrc = SCNGeometrySource(vertices: verts)
+        var sources: [SCNGeometrySource] = [vsrc]
+        if let uvs = mesh.uvs {
+            let uvPoints = uvs.map { CGPoint(x: CGFloat($0.x), y: CGFloat(1 - $0.y)) }
+            let uvsrc = SCNGeometrySource(textureCoordinates: uvPoints)
+            sources.append(uvsrc)
+        }
+        let idx: [UInt32]
+        if let idxTriples = mesh.indices { idx = idxTriples.flatMap { [$0.x, $0.y, $0.z] } }
+        else { idx = mesh.faces.flatMap { [$0.x, $0.y, $0.z] } }
+        let data = Data(bytes: idx, count: idx.count * MemoryLayout<UInt32>.size)
+        let elem = SCNGeometryElement(data: data, primitiveType: .triangles, primitiveCount: idx.count/3, bytesPerIndex: MemoryLayout<UInt32>.size)
+        let geo = SCNGeometry(sources: sources, elements: [elem])
+        let mat = SCNMaterial()
+        if let tex = mesh.albedo { mat.diffuse.contents = tex } else { mat.diffuse.contents = UIColor.systemTeal }
+        mat.isDoubleSided = false
+        geo.firstMaterial = mat
+        node.geometry = geo
+        scene.rootNode.addChildNode(node)
+        let cam = SCNCamera(); cam.zFar = 100; let camNode = SCNNode(); camNode.camera = cam; camNode.position = SCNVector3(0,0,0.4); scene.rootNode.addChildNode(camNode)
+        let light = SCNLight(); light.type = .omni; let ln = SCNNode(); ln.light = light; ln.position = SCNVector3(0,0,0.6); scene.rootNode.addChildNode(ln)
+        return scene
     }
 }
 
