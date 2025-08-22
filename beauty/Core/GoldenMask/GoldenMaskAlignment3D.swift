@@ -13,7 +13,7 @@ enum GoldenMaskAlignment3D {
         let X = src.map { $0 - ms }
         let Y = dst.map { $0 - md }
         var cov = float3x3(columns: (SIMD3<Float>(0,0,0), SIMD3<Float>(0,0,0), SIMD3<Float>(0,0,0)))
-        for i in 0..<src.count { cov += outerProduct(Y[i], X[i]) / n }
+        for i in 0..<src.count { cov += outerProduct(Y[i], X[i]) * (1.0 / n) }
         // SVD of cov = U S V^T
         let (U,S,V) = svd3x3(cov)
         var R: float3x3 = U * V.transpose
