@@ -26,12 +26,20 @@ final class ManifestService {
   // 可选本地 PEM 兜底
   private let fallbackPublicKeyPEM = """
   -----BEGIN PUBLIC KEY-----
-  <PUBLIC_KEY_PEM>
+  MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPIftZ2dvvEjSWLXAqNWxz7ukOuvF
+  SeUOYcDj7l+4y9x4nYuGYGgfsQA2h6C88ygpi8IIjzbFmS/lAXp4lXuDjg==
   -----END PUBLIC KEY-----
   """
 
   struct SignedEnvelope: Decodable { let json: Manifest; let signature: String; let payload_b64: String; let created_at: String? }
   enum ManifestError: Error { case invalidURL, badEnvelope, verificationFailed }
+
+  // 优先从 App Bundle 读取自定义 PEM（文件名：manifest_signing_public.pem）
+  private func loadLocalPEMFromBundle() -> String? {
+    guard let url = Bundle.main.url(forResource: "manifest_signing_public", withExtension: "pem") else { return nil }
+    guard let pem = try? String(contentsOf: url), pem.contains("BEGIN PUBLIC KEY") else { return nil }
+    return pem
+  }
 
   private func fetchRemotePEM() async -> String? {
     guard let host = URL(string: AppConfig.supabaseBase)?.host,
@@ -55,7 +63,7 @@ final class ManifestService {
           let sig = Data(base64Encoded: env.signature) else { throw ManifestError.badEnvelope }
     let digest = SHA256.hash(data: payload)
 
-    let pem = await fetchRemotePEM() ?? fallbackPublicKeyPEM
+    let pem = loadLocalPEMFromBundle() ?? (await fetchRemotePEM()) ?? fallbackPublicKeyPEM
     let pub = try P256.Signing.PublicKey(pemRepresentation: pem)
     let signature = try P256.Signing.ECDSASignature(derRepresentation: sig)
     guard pub.isValidSignature(signature, for: digest) else { throw ManifestError.verificationFailed }
