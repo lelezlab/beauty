@@ -13,11 +13,11 @@ enum GoldenMaskAlignment3D {
         let X = src.map { $0 - ms }
         let Y = dst.map { $0 - md }
         var cov = float3x3(0)
-        for i in 0..<src.count { cov += outerProduct(Y[i], X[i]) / n }
+        for i in 0..<src.count { cov += outerProduct(Y[i], X[i]) / Float(n) }
         // SVD of cov = U S V^T
         let (U,S,V) = svd3x3(cov)
-        var R = U * transpose(V)
-        if det3x3(R) < 0 { var U2 = U; U2[2,2] *= -1; R = U2 * transpose(V) }
+        var R = U * V.transpose
+        if det3x3(R) < 0 { var U2 = U; U2[2,2] *= -1; R = U2 * V.transpose }
         let varX = X.reduce(Float(0)) { $0 + dot($1,$1) } / n
         let s = (S[0] + S[1] + S[2]) / varX
         let t = md - s * (R * ms)
@@ -79,7 +79,7 @@ private func outerProduct(_ a: SIMD3<Float>, _ b: SIMD3<Float>) -> float3x3 {
 }
 private func svd3x3(_ A: float3x3) -> (U: float3x3, S: SIMD3<Float>, V: float3x3) {
     // Use eigen decomposition of A^T A for V, then compute U = A V S^-1
-    let ATA = transpose(A) * A
+    let ATA = A.transpose * A
     let (V, evals) = eigenSymmetric3x3(ATA)
     let S = SIMD3<Float>(sqrt(max(evals.x,0)), sqrt(max(evals.y,0)), sqrt(max(evals.z,0)))
     var Sinv = float3x3(0)
@@ -105,7 +105,7 @@ private func eigenSymmetric3x3(_ A: float3x3) -> (V: float3x3, evals: SIMD3<Floa
         var R = float3x3(1)
         R[p,p] = cos(phi); R[q,q] = cos(phi)
         R[p,q] = -sin(phi); R[q,p] = sin(phi)
-        B = transpose(R) * B * R
+        B = R.transpose * B * R
         V = V * R
     }
     return (V, SIMD3<Float>(B[0,0],B[1,1],B[2,2]))

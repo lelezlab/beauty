@@ -40,7 +40,7 @@ enum CelebMatch {
             }
         }
         // 构建向量
-        let model: AnyFaceEmbedder = (FaceEmbedder() ?? nil) as? AnyFaceEmbedder ?? StubFaceEmbedder()
+        let model: AnyFaceEmbedder = (FaceEmbedder() as AnyFaceEmbedder?) ?? StubFaceEmbedder()
         let builder = EmbedIndexBuilder(model: StubEmbeddingModel())
         let (es, vecs) = builder.build(from: dest)
         // 持久化（简化为 JSON）
@@ -71,7 +71,7 @@ enum CelebMatch {
         guard let dataE = try? Data(contentsOf: metaURL), let entries = try? JSONDecoder().decode([CelebEntry].self, from: dataE), let vecData = try? Data(contentsOf: vecURL), let arr = try? JSONSerialization.jsonObject(with: vecData) as? [[Double]] else { return [] }
         let vectors: [[Float]] = arr.map { $0.map { Float($0) } }
         // 选择嵌入器
-        let embedder: AnyFaceEmbedder = (FaceEmbedder() ?? nil) as AnyFaceEmbedder? ?? StubFaceEmbedder()
+        let embedder: AnyFaceEmbedder = (FaceEmbedder() as AnyFaceEmbedder?) ?? StubFaceEmbedder()
         let q = (try? embedder.embed(aligned)) ?? []
         var scores: [(Int, Double)] = []
         for (i, v) in vectors.enumerated() { if !v.isEmpty { scores.append((i, EmbedSearch.cosine(q, v))) } }
