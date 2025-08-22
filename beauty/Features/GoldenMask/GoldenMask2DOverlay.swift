@@ -25,18 +25,14 @@ struct GoldenMask2DOverlay: View {
                 if let curves = spec?.curves {
                     ForEach(Array(curves.enumerated()), id: \.offset) { pair in
                         let c = pair.element
-                        var avg: Double = 0; var count: Double = 0
-                        var pts: [CGPoint] = []
-                        for name in c.through {
-                            if let dv = byId[name] { pts.append(dv.point); avg += dv.deltaMM; count += 1 }
-                        }
+                        let pts: [CGPoint] = c.through.compactMap { byId[$0]?.point }
+                        let vals: [Double] = c.through.compactMap { byId[$0]?.deltaMM }
+                        let mean: Double = vals.isEmpty ? 0 : (vals.reduce(0, +) / Double(vals.count))
                         if pts.count >= 2 {
-                            let color: Color = {
-                                let m = (count>0 ? avg/count : 0)
-                                if m <= 1 { return .green } else if m <= 3 { return .yellow } else { return .red }
-                            }()
+                            let color: Color = (mean <= 1) ? .green : ((mean <= 3) ? .yellow : .red)
                             Path { p in
-                                p.move(to: pts[0]); for pt in pts.dropFirst() { p.addLine(to: pt) }
+                                p.move(to: pts[0])
+                                for pt in pts.dropFirst() { p.addLine(to: pt) }
                             }.stroke(color.opacity(0.8), lineWidth: 2)
                         }
                     }
