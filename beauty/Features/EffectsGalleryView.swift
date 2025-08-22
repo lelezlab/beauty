@@ -55,6 +55,7 @@ struct EffectDetailView: View {
     @State private var selectedRegions: Set<String> = []
     @State private var safetyStates: [String: String] = [:]
     @State private var selectedSurgery: SurgeryMapping? = nil
+    @State private var showAnatomy: Bool = false
 
     var body: some View {
         ScrollView {
@@ -142,6 +143,11 @@ struct EffectDetailView: View {
                                 .tint(on ? .blue : .gray)
                             }
                         }
+                    }
+                    if let s = selectedSurgery, let anat = s.anatomy, !anat.isEmpty {
+                        Button("查看对应解剖结构") { showAnatomy = true }
+                            .buttonStyle(.bordered)
+                            .sheet(isPresented: $showAnatomy) { AnatomyView(targets: anat) }
                     }
                 }
                 // 若用户已在术式页选择了术式，提供“一键应用术式建议”
