@@ -19,7 +19,7 @@ final class ReconstructionOrchestrator {
             rollDegrees: CameraSession().levelDegrees
         )
         var ipd: Double? = nil
-        var norm: [String: [[Double>]]? = nil
+        var norm: [String: [[Double]]]? = nil
         if let lm = CaptureStore.shared.frontLandmarks, let res = LandmarkNormalizer.normalize(points: lm.points) {
             ipd = res.ipd
             norm = res.norm

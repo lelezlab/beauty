@@ -15,11 +15,11 @@ public struct CaptureBundle {
     public var right: UIImage?
     public var videoURL: URL?
     public var rawLandmarks: FacialLandmarksResult?
-    public var normalizedLandmarks: [String: [[Double>]]?
+    public var normalizedLandmarks: [String: [[Double]] ]?
     public var ipdNorm: Double?
     public var camera: CameraParams?
     public var qc: BTCaptureQC?
-    public init(front: UIImage?, left: UIImage?, right: UIImage?, videoURL: URL?, rawLandmarks: FacialLandmarksResult?, normalizedLandmarks: [String: [[Double>]]?, ipdNorm: Double?, camera: CameraParams?, qc: BTCaptureQC?) {
+    public init(front: UIImage?, left: UIImage?, right: UIImage?, videoURL: URL?, rawLandmarks: FacialLandmarksResult?, normalizedLandmarks: [String: [[Double]] ]?, ipdNorm: Double?, camera: CameraParams?, qc: BTCaptureQC?) {
         self.front = front; self.left = left; self.right = right; self.videoURL = videoURL
         self.rawLandmarks = rawLandmarks
         self.normalizedLandmarks = normalizedLandmarks
