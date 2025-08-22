@@ -239,6 +239,10 @@ struct EffectDetailView: View {
                     NavigationLink("术后像谁（离线）") {
                         CelebMatchView(image: after)
                     }
+                    // 3D 预览（实验）
+                    NavigationLink("3D 预览（实验）") {
+                        Face3DPreviewView()
+                    }
                 }
                 // 一致性评分展示
                 if multiViewLinked {

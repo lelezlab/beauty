@@ -11,7 +11,7 @@ struct GoldenMask3DOverlay: UIViewRepresentable {
         return v
     }
     func updateUIView(_ view: SCNView, context: Context) {
-        guard let mesh = mesh else { return }
+        guard mesh != nil else { return }
         // 占位：显示一个球体并根据 mm 偏差着色（真实实现接 SceneKit 网格）
         view.scene = SCNScene()
         let node = SCNNode(geometry: SCNSphere(radius: 0.5))

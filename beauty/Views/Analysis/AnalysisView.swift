@@ -30,7 +30,8 @@ struct AnalysisView: View {
 					if !hs.isEmpty {
 						Text("差异热点：").font(.subheadline)
 						ForEach(hs) { h in
-							Text("• \(h.title) 偏差 \(h.deltaMM, specifier: \"%.1f\")mm")
+							let delta = String(format: "%.1f", h.deltaMM)
+							Text("• \(h.title) 偏差 \(delta)mm")
 								.font(.footnote)
 						}
 					}
