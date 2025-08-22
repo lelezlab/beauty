@@ -177,8 +177,9 @@ struct EffectDetailView: View {
                 } else if let preview = preview {
                     ZStack(alignment: .topLeading) {
                         Image(uiImage: preview).resizable().scaledToFit()
-                        if RemoteEffectsFlags.goldenGuidesEnabled && showGoldenMask { GoldenGuidesOverlay(landmarks: CaptureStore.shared.frontLandmarks).padding(4) }
-                        if RemoteEffectsFlags.goldenGuidesEnabled && showGoldenMask { GoldenGuidesOverlay(landmarks: CaptureStore.shared.frontLandmarks).padding(4) }
+                        if RemoteEffectsFlags.goldenGuidesEnabled && showGoldenMask {
+                            GoldenMask2DOverlay(landmarks: CaptureStore.shared.frontLandmarks).padding(4)
+                        }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
