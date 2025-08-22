@@ -76,6 +76,7 @@ private struct CaptureModeSwitcher: View {
     @State private var left: UIImage?
     @State private var right: UIImage?
     @State private var goAnalysis: Bool = false
+    @State private var go3DPreview: Bool = false
     var body: some View {
         VStack {
             HStack {
@@ -90,7 +91,7 @@ private struct CaptureModeSwitcher: View {
             .padding(.horizontal)
             if useVideo {
                 FaceVideoCaptureView { f, l, r in
-                    front = f; left = l; right = r; goAnalysis = true
+                    front = f; left = l; right = r; goAnalysis = false; go3DPreview = true
                     // 完成三帧后触发 3D 重建（占位后台）；若 QC 不足则优雅降级
                     let qcOK = (ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.3, exposureMean: 0.6, faceCoverage: 0.5, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))) >= 0.5
                     if qcOK {
@@ -99,7 +100,7 @@ private struct CaptureModeSwitcher: View {
                 }
             } else {
                 GuidedCaptureView { f, l, r in
-                    front = f; left = l; right = r; goAnalysis = true
+                    front = f; left = l; right = r; goAnalysis = false; go3DPreview = true
                     let qcOK = (ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.3, exposureMean: 0.6, faceCoverage: 0.5, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))) >= 0.5
                     if qcOK {
                         Task { _ = await ReconstructionOrchestrator.shared.reconstruct(backend: .arkit) }
@@ -108,6 +109,7 @@ private struct CaptureModeSwitcher: View {
             }
         }
         .navigationDestination(isPresented: $goAnalysis) { AnalysisView(front: front ?? UIImage()) }
+        .navigationDestination(isPresented: $go3DPreview) { Face3DPreviewView() }
         .navigationTitle("面诊")
     }
 }
