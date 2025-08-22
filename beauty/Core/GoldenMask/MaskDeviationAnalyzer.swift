@@ -6,19 +6,30 @@ import CoreGraphics
 enum MaskDeviationAnalyzer {
     struct DeviationPoint: Identifiable { let id: String; let point: CGPoint; let deltaMM: Double }
 
-    static func analyze2D(landmarks: FacialLandmarksResult?, imageSize: CGSize) -> [DeviationPoint] {
+    static func analyze2D(landmarks: FacialLandmarksResult?, imageSize: CGSize, spec: GoldenSpec? = nil) -> [DeviationPoint] {
         guard let lm = landmarks, !lm.points.isEmpty else { return [] }
-        // 选择一组锚点（示意）：鼻尖(鼻部中线最低点近似)、两眶中心、颏点（下唇外侧最低近似）
-        let chosen: [(id: String, key: String, indexHint: Int?)] = [
-            ("nasion", "noseCrest", 0),
-            ("pronasale", "nose", nil),
-            ("pogonion", "faceContour", nil)
-        ]
+        // 若提供了 golden spec，则使用 anchors 中的命名
+        let chosen: [(id: String, key: String, indexHint: Int?)] = {
+            if let _ = spec {
+                // 简化映射：假设 landmarks 命名接近 VN 命名
+                return [
+                    ("nasion", "noseCrest", 0),
+                    ("pronasale", "nose", nil),
+                    ("pogonion", "faceContour", nil)
+                ]
+            } else {
+                return [
+                    ("nasion", "noseCrest", 0),
+                    ("pronasale", "nose", nil),
+                    ("pogonion", "faceContour", nil)
+                ]
+            }
+        }()
         // 估计 IPD（归一化距离）
         guard let le = lm.points["leftEye"], let re = lm.points["rightEye"], !le.isEmpty, !re.isEmpty else { return [] }
         let lc = avg(le), rc = avg(re)
         let ipdPx = hypot(Double(lc.x - rc.x), Double(lc.y - rc.y))
-        let mmPerPx = CalibrationManager.shared.state.scaleMMPerPixel ?? 1.0
+        let mmPerPx = CalibrationManager.shared.state.scaleMMPerPixel ?? (spec?.scale_mm_per_px ?? 1.0)
         var out: [DeviationPoint] = []
         for item in chosen {
             guard let arr = lm.points[item.key], !arr.isEmpty else { continue }
@@ -26,7 +37,7 @@ enum MaskDeviationAnalyzer {
                 if let idx = item.indexHint, arr.indices.contains(idx) { return arr[idx] }
                 return avg(arr)
             }()
-            // 构建一个极简黄金参考：眼间中点到鼻尖垂线、颏点在面下三分之一（示意占位）
+            // 构建参考：若提供 spec，可在此接入 anchors 几何；当前先保留示意参考
             let mid = CGPoint(x: (lc.x+rc.x)/2.0, y: (lc.y+rc.y)/2.0)
             let goldenYForId: CGFloat = {
                 switch item.id {
