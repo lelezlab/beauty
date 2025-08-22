@@ -10,12 +10,14 @@ struct GuidedCaptureView: View {
 	@State private var right: UIImage?
 	@State private var step: Int = 0
 	@State private var requireQualityPass: Bool = false
+	@State private var showConsent: Bool = false
+	@State private var showTips: Bool = true
 	@Environment(\.modelContext) private var modelContext
 	var onFinished: (UIImage, UIImage, UIImage) -> Void
 
 	var body: some View {
 		VStack(spacing: 12) {
-			ZStack(alignment: .topTrailing) {
+			ZStack(alignment: .top) {
 				VideoPreviewView(session: camera.captureSession)
 					.allowsHitTesting(false)
 					.overlay { guideOverlay.allowsHitTesting(false) }
@@ -27,6 +29,7 @@ struct GuidedCaptureView: View {
 				}
 				// 底部浮层工具条，确保可点击
 				.overlay(alignment: .bottom) { bottomToolbar }
+				GuidedTipsOverlay(visible: $showTips)
 			}
 			Text(instructionText)
 				.font(.headline)
@@ -50,6 +53,11 @@ struct GuidedCaptureView: View {
 					.foregroundStyle(.secondary)
 			}
 		}
+		.onAppear {
+			if ConsentManager.shared.state == .unknown { showConsent = true }
+			DispatchQueue.main.asyncAfter(deadline: .now()+4) { withAnimation { showTips = false } }
+		}
+		.sheet(isPresented: $showConsent) { ConsentFlowView() }
 	}
 
 	private var instructionText: String {
