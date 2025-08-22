@@ -21,7 +21,7 @@ final class FaceEmbedder: AnyFaceEmbedder {
     }
     func embed(_ image: UIImage) throws -> [Float] {
         guard let buf = image.pixelBuffer(width: 112, height: 112) else { return [] }
-        let input = MLDictionaryFeatureProvider(dictionary: ["input": buf])
+        let input = try MLDictionaryFeatureProvider(dictionary: ["input": buf])
         let out = try model.prediction(from: input)
         guard let a = out.featureValue(for: "output")?.multiArrayValue else { return [] }
         var v = (0..<a.count).map { Float(truncating: a[$0]) }
