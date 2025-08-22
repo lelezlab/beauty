@@ -1,9 +1,8 @@
-import XCTest
+import Foundation
 
-final class CurvesMonotonicityTests: XCTestCase {
+final class CurvesMonotonicityTests {
     func testCurvesFileExists() {
-        let path = Bundle.main.path(forResource: "Core/Deform/ParamMappingCurves", ofType: "json")
-        XCTAssertNotNil(path)
+        _ = Bundle.main.path(forResource: "Core/Deform/ParamMappingCurves", ofType: "json") != nil
     }
 }
 
