@@ -11,13 +11,14 @@ enum FaceAlignment {
         var X = zip(sx, sy).map { SIMD2<Double>($0 - msx, $1 - msy) }
         var Y = zip(dx, dy).map { SIMD2<Double>($0 - mdx, $1 - mdy) }
 
-        var cov = double2x2(repeating: 0)
+        var cov = double2x2(SIMD2<Double>(0,0), SIMD2<Double>(0,0))
         for i in 0..<5 {
             let c0 = SIMD2<Double>(X[i].x * Y[i].x, X[i].y * Y[i].x)
             let c1 = SIMD2<Double>(X[i].x * Y[i].y, X[i].y * Y[i].y)
             cov += double2x2(c0, c1)
         }
-        var U = double2x2(0), V = double2x2(0)
+        var U = double2x2(SIMD2<Double>(0,0), SIMD2<Double>(0,0))
+        var V = double2x2(SIMD2<Double>(0,0), SIMD2<Double>(0,0))
         var S = SIMD2<Double>(0, 0)
         svd2x2(cov, &U, &S, &V)
         var R = U * V.transpose
