@@ -4,6 +4,9 @@ import simd
 
 struct GoldenMask3DOverlay: UIViewRepresentable {
     let mesh: FaceMesh3D?
+    var t1: Float = 1.0
+    var t2: Float = 3.0
+    var alpha: Float = 0.95
     func makeUIView(context: Context) -> SCNView {
         let v = SCNView()
         v.backgroundColor = .black
@@ -32,17 +35,12 @@ struct GoldenMask3DOverlay: UIViewRepresentable {
                 let data = Data(bytes: gm.faces.flatMap { [$0.x, $0.y, $0.z] }, count: gm.faces.count*3*MemoryLayout<UInt32>.size)
                 return [SCNGeometryElement(data: data, primitiveType: .triangles, primitiveCount: gm.faces.count, bytesPerIndex: MemoryLayout<UInt32>.size)]
             }()
-            // 生成每顶点颜色：根据 anchors 的简化偏差（占位：没有用户 3D 网格，仅基于 2D 偏差平均）
-            var colors: [SIMD4<Float>] = Array(repeating: SIMD4<Float>(0.2, 0.8, 0.7, 1), count: gm.vertices.count)
-            if let anchors = anchors {
-                // 映射三处关键点（示意）：nasion/pronasale/pogonion → 给附近顶点稍作着色变化
-                let keys = ["nasion","pronasale","pogonion"]
-                for k in keys {
-                    if let idx = anchors.indices[k], idx < gm.vertices.count {
-                        let c: SIMD4<Float> = (k == "pronasale") ? SIMD4<Float>(1,0,0,1) : (k == "nasion") ? SIMD4<Float>(1,1,0,1) : SIMD4<Float>(0,1,0,1)
-                        colors[idx] = c
-                    }
-                }
+            // 生成每顶点颜色：使用真实毫米偏差（黄金 → 用户网格配准）
+            var colors: [SIMD4<Float>] = Array(repeating: SIMD4<Float>(0.2, 0.8, 0.7, alpha), count: gm.vertices.count)
+            if let user = mesh {
+                let userAnchors = user.metadata?["anchors3d"] as? [String:Int]
+                let goldenAnchors = anchors?.indices
+                colors = GoldenMaskAlignment3D.colorize(golden: gm, user: user, anchorsGolden: goldenAnchors, anchorsUser: userAnchors, t1: t1, t2: t2, alpha: alpha)
             }
             let colorData = Data(bytes: colors, count: colors.count*MemoryLayout<SIMD4<Float>>.size)
             let colorSource = SCNGeometrySource(data: colorData, semantic: .color, vectorCount: colors.count, usesFloatComponents: true, componentsPerVector: 4, bytesPerComponent: MemoryLayout<Float>.size, dataOffset: 0, dataStride: MemoryLayout<SIMD4<Float>>.size)

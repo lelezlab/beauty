@@ -10,7 +10,7 @@ struct Face3DPreviewView: View {
     var body: some View {
         VStack(spacing: 12) {
             if meshAvailable, let m = CaptureStore.shared.lastMesh {
-                GoldenMask3DOverlay(mesh: m)
+                GoldenMask3DOverlay(mesh: m, t1: Float(t1), t2: Float(t2), alpha: Float(alpha))
                     .frame(height: 320)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {

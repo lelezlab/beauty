@@ -37,11 +37,20 @@ enum GoldenMaskAlignment3D {
                 }
             }
         }
-        // 2) 相似变换将 golden → user 坐标
+        // 2) 相似变换将 golden → user 坐标（若无锚点对，则使用质心平移+半径比近似）
         let T = computeSimilarity(src: Gp, dst: Up)
-        let R = T?.R ?? float3x3(1)
-        let s = T?.s ?? 1
-        let t = T?.t ?? SIMD3<Float>(0,0,0)
+        var R = T?.R ?? float3x3(1)
+        var s = T?.s ?? 1
+        var t = T?.t ?? SIMD3<Float>(0,0,0)
+        if Gp.isEmpty || Up.isEmpty {
+            let mg = golden.vertices.reduce(SIMD3<Float>(0,0,0), +) / Float(max(golden.vertices.count,1))
+            let mu = user.vertices.reduce(SIMD3<Float>(0,0,0), +) / Float(max(user.vertices.count,1))
+            let rg = sqrt(max(1e-6, golden.vertices.reduce(Float(0)) { $0 + length_squared($1 - mg) } / Float(max(golden.vertices.count,1))))
+            let ru = sqrt(max(1e-6, user.vertices.reduce(Float(0)) { $0 + length_squared($1 - mu) } / Float(max(user.vertices.count,1))))
+            s = ru/rg
+            R = float3x3(1)
+            t = mu - s * mg
+        }
         var aligned: [SIMD3<Float>] = golden.vertices.map { (s * (R * $0)) + t }
         // 3) 对每个 golden 顶点，找最近的 user 顶点并计算距离（mm）
         let userVerts = user.vertices
@@ -62,6 +71,12 @@ enum GoldenMaskAlignment3D {
 
 // MARK: - Small SVD helpers (approximate)
 private func det3x3(_ m: float3x3) -> Float { simd_determinant(m) }
+private func outerProduct(_ a: SIMD3<Float>, _ b: SIMD3<Float>) -> float3x3 {
+    let c0 = SIMD3<Float>(a.x*b.x, a.y*b.x, a.z*b.x)
+    let c1 = SIMD3<Float>(a.x*b.y, a.y*b.y, a.z*b.y)
+    let c2 = SIMD3<Float>(a.x*b.z, a.y*b.z, a.z*b.z)
+    return float3x3(c0, c1, c2)
+}
 private func svd3x3(_ A: float3x3) -> (U: float3x3, S: SIMD3<Float>, V: float3x3) {
     // Use eigen decomposition of A^T A for V, then compute U = A V S^-1
     let ATA = transpose(A) * A
