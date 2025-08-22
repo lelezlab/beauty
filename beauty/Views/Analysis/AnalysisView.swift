@@ -29,7 +29,10 @@ struct AnalysisView: View {
 					let hs = AestheticsInsights.hotspots(from: lmk, imageSize: front.size)
 					if !hs.isEmpty {
 						Text("差异热点：").font(.subheadline)
-						ForEach(hs) { h in Text("• \\(h.title) 偏差 \\(String(format: "%.1f", h.deltaMM))mm").font(.footnote) }
+						ForEach(hs) { h in
+							Text("• \(h.title) 偏差 \(h.deltaMM, specifier: \"%.1f\")mm")
+								.font(.footnote)
+						}
 					}
 				}
 				if !suggestions.isEmpty { suggestionsSection }

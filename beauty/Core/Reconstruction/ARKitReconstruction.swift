@@ -3,9 +3,9 @@ import Foundation
 import UIKit
 import simd
 
-public final class ARKitReconstruction: ReconstructionProvider {
-    public init() {}
-    public func reconstruct(from bundle: CaptureBundle) async throws -> FaceMesh3D {
+final class ARKitReconstruction: ReconstructionProvider {
+    init() {}
+    func reconstruct(from bundle: CaptureBundle) async throws -> FaceMesh3D {
         // Placeholder: return a unit sphere-like mesh as stub
         var verts: [SIMD3<Float>] = []
         var faces: [SIMD3<UInt32>] = []
