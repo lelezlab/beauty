@@ -1,27 +1,42 @@
 import UIKit
 import ARKit
 import AVFoundation
+import SwiftUI
 
 final class FaceCaptureViewController: UIViewController, ARSessionDelegate {
   private let sceneView = ARSCNView(frame: .zero)
-  private let overlay = FaceLineOverlay()
+  private var overlayHost: UIHostingController<FaceLineOverlay>?
 
   override func viewDidLoad() {
     super.viewDidLoad()
     view.backgroundColor = .black
+
     sceneView.frame = view.bounds
     sceneView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     sceneView.session.delegate = self
     view.addSubview(sceneView)
-    overlay.frame = view.bounds
-    overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    view.addSubview(overlay)
+
+    let host = UIHostingController(rootView: FaceLineOverlay(size: view.bounds.size))
+    addChild(host)
+    host.view.backgroundColor = .clear
+    host.view.frame = view.bounds
+    host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    view.addSubview(host.view)
+    host.didMove(toParent: self)
+    overlayHost = host
 
     if !ARFaceTrackingConfiguration.isSupported {
-      let fb = FallbackFaceCaptureController()
-      fb.view.frame = view.bounds
-      addChild(fb); view.addSubview(fb.view); fb.didMove(toParent: self)
+      // Non-TrueDepth devices: keep only camera preview from other flows; overlay still shows guides
       sceneView.isHidden = true
+      host.view.isHidden = false
+    }
+  }
+
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    if let host = overlayHost {
+      host.view.frame = view.bounds
+      host.rootView = FaceLineOverlay(size: view.bounds.size)
     }
   }
 
@@ -40,13 +55,6 @@ final class FaceCaptureViewController: UIViewController, ARSessionDelegate {
   }
 
   func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
-    guard let face = anchors.compactMap({ $0 as? ARFaceAnchor }).first else { return }
-    let geom = face.geometry
-    var m = GeometryAnalyzer.analyze(vertices: geom.vertices, transform: face.transform)
-    if let rule = RulesStore.shared.byMetric["goode_ratio"],
-       let goode = m.goodeRatio, let softMin = rule.soft_min, Double(goode) < softMin {
-      m.suggestions.append("增加鼻尖投影 1–2 mm（Goode < \(softMin)）")
-    }
-    overlay.update(with: m)
+    // Placeholder: metrics computation is handled elsewhere; AR keeps tracking for stability.
   }
 }

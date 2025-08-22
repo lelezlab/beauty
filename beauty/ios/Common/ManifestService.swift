@@ -23,8 +23,8 @@ enum CodableValue: Codable {
 
 final class ManifestService {
   static let shared = ManifestService()
-  // TODO: 用户替换为真实公钥 PEM
-  private let publicKeyPEM = """
+  // 可选本地 PEM 兜底
+  private let fallbackPublicKeyPEM = """
   -----BEGIN PUBLIC KEY-----
   <PUBLIC_KEY_PEM>
   -----END PUBLIC KEY-----
@@ -33,15 +33,30 @@ final class ManifestService {
   struct SignedEnvelope: Decodable { let json: Manifest; let signature: String; let payload_b64: String; let created_at: String? }
   enum ManifestError: Error { case invalidURL, badEnvelope, verificationFailed }
 
+  private func fetchRemotePEM() async -> String? {
+    guard let host = URL(string: AppConfig.supabaseBase)?.host,
+          let projectRef = host.split(separator: ".").first,
+          let url = URL(string: "https://\(projectRef).functions.supabase.co/manifest-sign/pubkey") else { return nil }
+    do {
+      let (data, _) = try await URLSession.shared.data(from: url)
+      if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+         let pem = obj["public_pem"] as? String, pem.contains("BEGIN PUBLIC KEY") {
+        return pem
+      }
+    } catch { }
+    return nil
+  }
+
   func fetchAndVerifyManifest() async throws -> Manifest {
-    guard !AppConfig.manifestURL.contains("<"),
-          let url = URL(string: AppConfig.manifestURL) else { throw ManifestError.invalidURL }
+    guard let url = URL(string: AppConfig.manifestURL), !AppConfig.manifestURL.isEmpty else { throw ManifestError.invalidURL }
     let (data, _) = try await URLSession.shared.data(from: url)
     let env = try JSONDecoder().decode(SignedEnvelope.self, from: data)
     guard let payload = Data(base64Encoded: env.payload_b64),
           let sig = Data(base64Encoded: env.signature) else { throw ManifestError.badEnvelope }
     let digest = SHA256.hash(data: payload)
-    let pub = try P256.Signing.PublicKey(pemRepresentation: publicKeyPEM)
+
+    let pem = await fetchRemotePEM() ?? fallbackPublicKeyPEM
+    let pub = try P256.Signing.PublicKey(pemRepresentation: pem)
     let signature = try P256.Signing.ECDSASignature(derRepresentation: sig)
     guard pub.isValidSignature(signature, for: digest) else { throw ManifestError.verificationFailed }
     return env.json
