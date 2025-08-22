@@ -5,6 +5,7 @@ struct BeautyApp: App {
   @StateObject private var results = ResultsStore()
   init() {
     Task { await RulesStore.shared.fetch() }
+    MetricKitManager.shared.activate()
     Task {
       do {
         _ = try await ManifestService.shared.fetchAndVerifyManifest()
