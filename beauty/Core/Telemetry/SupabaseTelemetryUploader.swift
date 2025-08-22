@@ -18,7 +18,7 @@ final class SupabaseTelemetryUploader: TelemetryUploader {
     }
 
     func flush() async {
-        var events = queue.readAll()
+        let events = queue.readAll()
         guard !events.isEmpty else { return }
         // Insert sessions first (unique by sessionId)
         let sessionsRows = sessionsPayload(from: events)

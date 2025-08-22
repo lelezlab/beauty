@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct BeautyApp: App {
+  @StateObject private var results = ResultsStore()
   init() {
     Task { await RulesStore.shared.fetch() }
     Task {
@@ -14,6 +15,9 @@ struct BeautyApp: App {
     }
   }
   var body: some Scene {
-    WindowGroup { FaceCaptureView().ignoresSafeArea() }
+    WindowGroup {
+      MainTabView()
+        .environmentObject(results)
+    }
   }
 }

@@ -29,7 +29,7 @@ final class EffectCenter: ObservableObject {
                 // TODO: log telemetry
             }
         }
-        loadActive()
+        loadLocalIfAvailable()
     }
 
     private func downloadIfNeeded(summary: EffectPackSummary, manifest: EffectManifest, appVersion: String, regionCode: String) async throws {
@@ -64,7 +64,7 @@ final class EffectCenter: ObservableObject {
         return try? JSONDecoder().decode(EffectPack.self, from: data)
     }
 
-    private func loadActive() {
+    func loadLocalIfAvailable() {
         var loaded: [EffectPack] = []
         guard let dirs = try? fileManager.contentsOfDirectory(at: baseURL, includingPropertiesForKeys: nil) else { return }
         for idDir in dirs {

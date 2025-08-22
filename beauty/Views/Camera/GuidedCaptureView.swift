@@ -79,6 +79,8 @@ struct GuidedCaptureView: View {
 				}
 			}
 			HStack(spacing: 12) {
+				Button { showingTips.toggle() } label: { Label("拍摄要点", systemImage: "questionmark.circle") }
+					.buttonStyle(.bordered)
 				Toggle("必须通过质检后才能拍照", isOn: $requireQualityPass)
 					.toggleStyle(.switch)
 				Spacer()
@@ -105,7 +107,10 @@ struct GuidedCaptureView: View {
 		.background(.ultraThinMaterial)
 		.ignoresSafeArea(edges: .bottom)
 		.zIndex(1000)
+		.sheet(isPresented: $showingTips) { CaptureTipsSheet() }
 	}
+
+	@State private var showingTips: Bool = false
 
 	private var currentImage: UIImage? {
 		switch step { case 0: return front; case 1: return left; default: return right }
@@ -257,6 +262,26 @@ struct GuidedCaptureView: View {
 		}
 		.frame(width: 64, height: 64)
 		.clipShape(RoundedRectangle(cornerRadius: 8))
+	}
+}
+
+private struct CaptureTipsSheet: View {
+	var body: some View {
+		NavigationStack {
+			List {
+				Section("姿态与对齐") {
+					Text("保持正脸、水平，十字线居中")
+					Text("距离提示显示‘距离合适’时拍摄")
+				}
+				Section("光线与清晰度") {
+					Text("面部均匀、不过曝；画面不模糊")
+				}
+				Section("三视图要点") {
+					Text("左/右侧各转 90°，头不歪")
+				}
+			}
+			.navigationTitle("拍摄要点")
+		}
 	}
 }
 

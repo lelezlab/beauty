@@ -155,7 +155,7 @@ final class CameraSession: NSObject, ObservableObject {
 		let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
 		let context = CIContext(options: nil)
 		guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
-		return UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .leftMirrored)
+		return UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .upMirrored)
 	}
 }
 

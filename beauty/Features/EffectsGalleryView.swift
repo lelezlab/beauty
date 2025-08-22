@@ -1,12 +1,18 @@
 import SwiftUI
+import UIKit
 
 struct EffectsGalleryView: View {
     var categoryFilter: String? = nil
     @StateObject private var center = EffectCenter.shared
-    @State private var manifestURL: String = "https://example.com/manifest.json"
+    @State private var manifestURL: String = (Bundle.main.object(forInfoDictionaryKey: "AppManifestURL") as? String) ?? ""
 
     var body: some View {
         List {
+            if center.activeEffects.isEmpty {
+                Section {
+                    Text("暂无效果包。可先使用内置本地包，或输入 Manifest URL 点击拉取。").font(.caption).foregroundStyle(.secondary)
+                }
+            }
             if categoryFilter == nil {
                 Section("远程清单") {
                     HStack { TextField("Manifest URL", text: $manifestURL).textInputAutocapitalization(.never); Button("拉取") { Task { try? await center.fetchManifest(from: URL(string: manifestURL)!); await center.syncEffects(deviceId: UIDevice.current.identifierForVendor?.uuidString ?? "dev", appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0", regionCode: Locale.current.region?.identifier ?? "US") } } }
@@ -17,9 +23,22 @@ struct EffectsGalleryView: View {
                 ForEach(center.activeEffects.filter { categoryFilter == nil ? true : ($0.category == categoryFilter!) }) { pack in
                     NavigationLink(pack.display_name) { EffectDetailView(pack: pack) }
                 }
+                if center.activeEffects.isEmpty {
+                    NavigationLink("打开本地鼻部示例包") {
+                        if let p = try? JSONDecoder().decode(EffectPack.self, from: (try? Data(contentsOf: URL(fileURLWithPath: Bundle.main.path(forResource: "Effects/local/rhinoplasty_2025Q3_01", ofType: "json") ?? ""))) ?? Data()) {
+                            EffectDetailView(pack: p)
+                        } else { Text("本地示例包丢失") }
+                    }
+                }
             }
         }
         .navigationTitle("效果中心")
+        .onAppear {
+            // 离线兜底，先加载本地效果包
+            if center.activeEffects.isEmpty { center.loadLocalIfAvailable() }
+            // 若配置了默认 URL，自动尝试拉取
+            if manifestURL.isEmpty, let urlStr = Bundle.main.object(forInfoDictionaryKey: "AppManifestURL") as? String { manifestURL = urlStr }
+        }
     }
 }
 
@@ -170,6 +189,22 @@ struct EffectDetailView: View {
                         .frame(height: 240)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                if let before = CaptureStore.shared.frontImage, let after = preview {
+                    Button("导出前后对比 PDF") {
+                        let img = ExportService.compositeBeforeAfter(before: before, after: after, watermark: "beauty demo - not for medical use", layout: .vertical, showAB: true, regionText: RegionManager().displayName) ?? after
+                        let mp: BTMetricsPayload? = {
+                            if let m = CaptureStore.shared.frontLandmarks.map({ MetricsCalculator.compute(from: $0, imageSize: before.size) }) {
+                                let conf = ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.2, exposureMean: 0.6, faceCoverage: 0.6, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))
+                                return BTMetricsPayload(threeZones: Double(m.threeFacialZonesRatio), fiveEyes: Double(m.fiveEyesRatio), nasolabialDeg: Double(m.nasolabialAngleDegrees), chinProjection: Double(m.chinProjectionRatio), faceWH: Double(m.faceWidthToHeight), confidence: conf)
+                            }
+                            return nil
+                        }()
+                        if let pdf = ExportService.makePDF(from: img, disclaimer: "仅为视觉模拟，非医疗建议。", procedure: CaptureStore.shared.selectedProcedure, metrics: mp, location: RegionManager().displayName, timestamp: Date(), bddScore: BeautyTelemetryService.shared.lastBDDScore, consistency: multiViewLinked ? MultiViewMorpher.consistencyScore(front: CaptureStore.shared.frontLandmarks, left: CaptureStore.shared.leftLandmarks, right: CaptureStore.shared.rightLandmarks) : nil) {
+                            share(data: pdf, fileName: "beauty_effect_preview.pdf")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
                 // 一致性评分展示
                 if multiViewLinked {
                     let s = MultiViewMorpher.consistencyScore(front: CaptureStore.shared.frontLandmarks,
@@ -262,6 +297,19 @@ extension EffectDetailView {
     private func clampToSafetyIfNeeded(key: String, value: Double) -> Double {
         guard let w = AestheticsSafetyConfig.recommended[key] else { return value }
         return min(max(value, w.min), w.max)
+    }
+}
+
+private func share(data: Data, fileName: String) {
+    let tmp = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(fileName)
+    try? data.write(to: tmp)
+    DispatchQueue.main.async {
+        let av = UIActivityViewController(activityItems: [tmp], applicationActivities: nil)
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?
+            .rootViewController?
+            .present(av, animated: true)
     }
 }
 

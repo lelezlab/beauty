@@ -16,7 +16,7 @@ struct MainTabView: View {
 			NavigationStack { HomeView() }
 				.tabItem { Label("首页", systemImage: "sparkles") }
 				.tag(1)
-            NavigationStack { FaceCaptureView() }
+            NavigationStack { CaptureModeSwitcher() }
                 .tabItem { Label("面诊", systemImage: "camera.viewfinder") }
                 .tag(6)
 			NavigationStack { AssistantTabView() }
@@ -48,6 +48,57 @@ struct MainTabView: View {
 			Text("登录/订阅/通知设置（占位）")
 		}
 	}
+}
+
+private struct CaptureFlowView: View {
+    @State private var front: UIImage?
+    @State private var left: UIImage?
+    @State private var right: UIImage?
+    @State private var goAnalysis: Bool = false
+    var body: some View {
+        VStack {
+            GuidedCaptureView { f, l, r in
+                front = f; left = l; right = r
+                goAnalysis = true
+            }
+            .navigationDestination(isPresented: $goAnalysis) {
+                AnalysisView(front: front ?? UIImage())
+            }
+        }
+    }
+}
+
+private struct CaptureModeSwitcher: View {
+    @State private var useVideo: Bool = true
+    @State private var front: UIImage?
+    @State private var left: UIImage?
+    @State private var right: UIImage?
+    @State private var goAnalysis: Bool = false
+    var body: some View {
+        VStack {
+            HStack {
+                Picker("模式", selection: $useVideo) {
+                    Text("动态").tag(true)
+                    Text("拍照").tag(false)
+                }
+                .pickerStyle(.segmented)
+                Spacer()
+                NavigationLink(destination: CalibrationFlowView()) { CalibrationBadge() }
+            }
+            .padding(.horizontal)
+            if useVideo {
+                FaceVideoCaptureView { f, l, r in
+                    front = f; left = l; right = r; goAnalysis = true
+                }
+            } else {
+                GuidedCaptureView { f, l, r in
+                    front = f; left = l; right = r; goAnalysis = true
+                }
+            }
+        }
+        .navigationDestination(isPresented: $goAnalysis) { AnalysisView(front: front ?? UIImage()) }
+        .navigationTitle("面诊")
+    }
 }
 
 #Preview {

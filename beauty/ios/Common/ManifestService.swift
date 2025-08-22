@@ -63,7 +63,15 @@ final class ManifestService {
           let sig = Data(base64Encoded: env.signature) else { throw ManifestError.badEnvelope }
     let digest = SHA256.hash(data: payload)
 
-    let pem = loadLocalPEMFromBundle() ?? (await fetchRemotePEM()) ?? fallbackPublicKeyPEM
+    // 避免在 ?? 的 autoclosure 中使用 await，改为分步骤选择 PEM
+    let localPem = loadLocalPEMFromBundle()
+    var chosenPem: String?
+    if let localPem {
+      chosenPem = localPem
+    } else {
+      chosenPem = await fetchRemotePEM()
+    }
+    let pem = chosenPem ?? fallbackPublicKeyPEM
     let pub = try P256.Signing.PublicKey(pemRepresentation: pem)
     let signature = try P256.Signing.ECDSASignature(derRepresentation: sig)
     guard pub.isValidSignature(signature, for: digest) else { throw ManifestError.verificationFailed }

@@ -30,7 +30,14 @@ struct NewsFeedView: View {
             let (data, resp) = try await URLSession.shared.data(for: req)
             guard let http = resp as? HTTPURLResponse, 200..<300 ~= http.statusCode else { return }
             if let arr = try? JSONDecoder().decode([KBCard].self, from: data) { cards = arr }
-        } catch { }
+        } catch {
+            // 远端不可用时，使用本地兜底 `knowledge_data.json`
+            if let path = Bundle.main.path(forResource: "knowledge_data", ofType: "json"),
+               let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+               let arr = try? JSONDecoder().decode([KBCard].self, from: data) {
+                cards = arr
+            }
+        }
     }
 }
 

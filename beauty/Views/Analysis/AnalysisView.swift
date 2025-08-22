@@ -9,6 +9,7 @@ struct AnalysisView: View {
 	@State private var suggestions: [Suggestion] = []
 	@EnvironmentObject private var results: ResultsStore
     @State private var showGoldenMask: Bool = false
+    @State private var showingHelp: Bool = false
 
 	var body: some View {
 		ScrollView {
@@ -39,7 +40,7 @@ struct AnalysisView: View {
 							.font(.caption2)
 							.foregroundStyle(.orange)
 						// 以当前 IPD 估算 mm（仅提示）
-						let ipdPx: Double = {
+						let _: Double = {
 							guard let l = landmarks,
 							      let lp = l.points["left_eye"]?.first,
 							      let rp = l.points["right_eye"]?.first else { return 0 }
@@ -95,6 +96,8 @@ struct AnalysisView: View {
 		VStack(alignment: .leading, spacing: 8) {
 			HStack {
 				Text("三庭五眼与关键指标").font(.headline)
+				Button { showingHelp.toggle() } label: { Image(systemName: "info.circle") }
+					.buttonStyle(.plain)
 				Spacer()
 				if let qc = BeautyTelemetryService.shared.lastQC {
 					let c = ConfidenceEstimator.score(from: qc)
@@ -106,7 +109,9 @@ struct AnalysisView: View {
 			metricBar(name: "鼻唇角(°)", value: m.nasolabialAngleDegrees, target: 103, range: 85...120, format: "%.1f")
 			metricBar(name: "下巴投影", value: m.chinProjectionRatio, target: 1.0, range: 0.7...1.3, format: "%.2f")
 			metricBar(name: "面宽高比", value: m.faceWidthToHeight, target: 0.75, range: 0.5...1.1, format: "%.2f")
+			Text("说明：靠近目标值更理想；三庭/五眼目标≈1.00，鼻唇角≈103°，面宽高比≈0.75。").font(.caption).foregroundStyle(.secondary)
 		}
+		.sheet(isPresented: $showingHelp) { MetricHelpSheet() }
 
 		// 简易雷达图（归一化示意）
 		let radarItems: [RadarChartView.Item] = [
@@ -272,6 +277,21 @@ private struct PresetPreviewView: View {
 		let preview = renderer.applyPreset(preset, to: image, landmarks: landmarks)
 		Image(uiImage: preview).resizable().scaledToFit().padding()
 	}
+}
+
+private struct MetricHelpSheet: View {
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("三庭") { Text("额头-鼻底-下巴三段的相对比例，目标≈1.00 更均衡") }
+                Section("五眼") { Text("面宽约等于五个眼宽的总和，目标≈1.00 更均衡") }
+                Section("鼻唇角") { Text("鼻柱与上唇的夹角，常见理想值约 95°–110°，默认目标≈103°") }
+                Section("下巴投影") { Text("下巴前后投影与面部整体协调度，目标≈1.00") }
+                Section("面宽高比") { Text("脸部宽度/高度，默认目标≈0.75，不同脸型会有差异") }
+            }
+            .navigationTitle("指标说明")
+        }
+    }
 }
 
 
