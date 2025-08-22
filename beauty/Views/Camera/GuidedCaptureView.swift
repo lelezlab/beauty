@@ -21,7 +21,7 @@ struct GuidedCaptureView: View {
 				VideoPreviewView(session: camera.captureSession)
 					.allowsHitTesting(false)
 					.overlay { guideOverlay.allowsHitTesting(false) }
-					.overlay { if FeatureFlags.goldenGuidesEnabled { GoldenGuidesOverlay(landmarks: CaptureStore.shared.frontLandmarks).allowsHitTesting(false) } }
+					.overlay { if AppFeatureFlags.enableClinicianMode { GoldenGuidesOverlay(landmarks: CaptureStore.shared.frontLandmarks).allowsHitTesting(false) } }
 				.overlay(alignment: .top) {
 					HStack { levelIndicator; qualityBadges; distanceHint; alignScore; confidenceTag }
 						.padding(8)

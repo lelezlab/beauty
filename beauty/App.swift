@@ -9,7 +9,7 @@ struct BeautyApp: App {
     Task.detached {
       guard let u = URL(string: (UserDefaults.standard.string(forKey: "FlagsURL") ?? "")), !u.absoluteString.isEmpty else { return }
       if let (d, _) = try? await URLSession.shared.data(from: u),
-         let j = try? JSONSerialization.jsonObject(with: d) as? [String:Any] { FeatureFlags.applyRemote(j) }
+         let j = try? JSONSerialization.jsonObject(with: d) as? [String:Any] { AppFeatureFlags.applyRemote(j) }
     }
     Task {
       do {

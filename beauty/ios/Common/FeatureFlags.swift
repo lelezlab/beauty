@@ -1,6 +1,6 @@
 import Foundation
 
-enum FeatureFlags {
+enum AppFeatureFlags {
   static var enableDynamicVideo = true
   static var enable3DPreview = true
   static var enableClinicianMode = true
