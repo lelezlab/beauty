@@ -92,4 +92,20 @@ enum AestheticsAssessor {
     }
 }
 
+// 新增：风格词与“差异热点”
+enum AestheticsInsights {
+    struct Hotspot: Identifiable { let id: String; let title: String; let deltaMM: Double }
+    static func styleWords(from m: AestheticsMetrics) -> [String] {
+        var out: [String] = []
+        if m.fiveEyesRatio > 5.2 { out.append("窄长脸") } else if m.fiveEyesRatio < 4.5 { out.append("宽短脸") }
+        if m.nasolabialAngleDegrees > 105 { out.append("上翘鼻尖") } else if m.nasolabialAngleDegrees < 92 { out.append("下垂鼻尖") }
+        if m.chinProjectionRatio > 0.22 { out.append("下巴有力") } else if m.chinProjectionRatio < 0.12 { out.append("下巴后缩") }
+        return out
+    }
+    static func hotspots(from landmarks: FacialLandmarksResult?, imageSize: CGSize) -> [Hotspot] {
+        let devs = MaskDeviationAnalyzer.analyze2D(landmarks: landmarks, imageSize: imageSize)
+        return devs.sorted { $0.deltaMM > $1.deltaMM }.prefix(5).map { Hotspot(id: $0.id, title: $0.id, deltaMM: $0.deltaMM) }
+    }
+}
+
 

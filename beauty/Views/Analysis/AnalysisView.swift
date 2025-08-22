@@ -20,6 +20,18 @@ struct AnalysisView: View {
                     if showGoldenMask { GoldenGuidesOverlay(landmarks: landmarks, metrics: metrics).padding(8) }
 				}
 				if let m = metrics { metricsSection(m) }
+				// 新增：风格词与差异热点
+				if let m = metrics, let lmk = landmarks {
+					let words = AestheticsInsights.styleWords(from: m)
+					if !words.isEmpty {
+						Text("风格词：" + words.joined(separator: "、")).font(.subheadline)
+					}
+					let hs = AestheticsInsights.hotspots(from: lmk, imageSize: front.size)
+					if !hs.isEmpty {
+						Text("差异热点：").font(.subheadline)
+						ForEach(hs) { h in Text("• \\(h.title) 偏差 \\(String(format: "%.1f", h.deltaMM))mm").font(.footnote) }
+					}
+				}
 				if !suggestions.isEmpty { suggestionsSection }
                 Toggle("叠加黄金比例面罩", isOn: $showGoldenMask)
 				NavigationLink("心理健康守护 / BDD 自评") { BDDSelfAssessmentView() }
