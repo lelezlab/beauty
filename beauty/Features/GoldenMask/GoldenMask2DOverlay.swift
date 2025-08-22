@@ -23,9 +23,9 @@ struct GoldenMask2DOverlay: View {
                 .stroke(Color.yellow.opacity(0.4), lineWidth: 1)
                 // 若有曲线定义，按锚点连线并根据端点偏差着色
                 if let curves = spec?.curves {
-                    let pairs = Array(curves.enumerated())
-                    ForEach(pairs, id: \.element.name) { pair in
-                        let c = pair.element
+                    let idxs = Array(curves.indices)
+                    ForEach(idxs, id: \.self) { i in
+                        let c = curves[i]
                         var avg: Double = 0; var count: Double = 0
                         var pts: [CGPoint] = []
                         for name in c.through {
