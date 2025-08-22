@@ -307,6 +307,26 @@
   - 🟡 手动编辑滑杆组完善 + 撤销/重做
   - 📝 三视图联动形变（一致性）
 
+### 新增：重建管线（Photo/Video → 3D）
+
+- 入口与模块
+  - `Core/Reconstruction/`：`ReconstructionProvider` 协议、`CaptureBundle`（front/left/right、归一化 landmarks+IPD、相机参数、QC）、`FaceMesh3D`
+  - Provider：`ARKitReconstruction`（真机优先）、`DECAEdgeReconstruction`（占位回退）、`StubReconstructionProvider`（模拟器）
+  - `ReconstructionOrchestrator`：从 `CaptureStore` 组包 → 调用 Provider → 写回 `CaptureStore.lastMesh`，并贯通 `CalibrationManager.scaleMMPerPixel`
+- 调用位置
+  - `MainTabView/CaptureModeSwitcher`：三帧完成且 QC≥0.5 自动触发 `reconstruct(.arkit)`；否则保持 2D 流程
+- 依赖与降级
+  - `#if canImport(ARKit)` 自动选择；无 ARKit/模拟器使用 Stub，流程完整但返回空/简化网格
+- 本地运行
+  - 模拟器：可编译运行（走 Stub）；真机：启用 ARKit Provider
+
+### 新增：黄金比例面罩（2D/3D）
+
+- `Core/GoldenMask/MaskDeviationAnalyzer`：基于 landmarks 与 IPD 的简化偏差（毫米）
+- `Features/GoldenMask/GoldenMask2DOverlay`：2D 线框与偏差点（±1mm 绿/±3mm 黄/>±3mm 红）
+- `Features/GoldenMask/GoldenMask3DOverlay`：SceneKit 占位（后续接真实网格）
+- 接入：`EffectsGalleryView` 单图预览在开启“叠加黄金比例面罩”时启用 2D Overlay
+
 - 导出 & 咨询
   - ✅ 前后对比图 + PDF（水印/免责声明）
   - 🟡 导出样式（LOGO/时间戳/定位/多版式）与一键分享

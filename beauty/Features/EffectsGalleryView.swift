@@ -54,6 +54,7 @@ struct EffectDetailView: View {
     @State private var satisfaction: Int = 3
     @State private var selectedRegions: Set<String> = []
     @State private var safetyStates: [String: String] = [:]
+    @State private var selectedSurgery: SurgeryMapping? = nil
 
     var body: some View {
         ScrollView {
@@ -118,6 +119,28 @@ struct EffectDetailView: View {
                             controlValues = merged
                             BeautyTelemetryService.shared.recordPrefill(.init(source: "ApplyRecommended", procedureId: CaptureStore.shared.selectedProcedure?.id, weights: nil, params: merged))
                             Task { await recomputePreview() }
+                        }
+                    }
+                }
+                // 术式选择 + 自动映射
+                Group {
+                    Text("按术式选择").font(.subheadline).bold()
+                    let catalog = SurgeryCatalog.load()
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(catalog, id: \.id) { m in
+                                let on = selectedSurgery?.id == m.id
+                                Button(m.name) {
+                                    selectedSurgery = m
+                                    if let lmk = CaptureStore.shared.frontLandmarks {
+                                        let mtx = MetricsCalculator.compute(from: lmk, imageSize: CGSize(width: 1, height: 1))
+                                        controlValues = SurgeryPlanner.makeParams(for: m, base: controlValues, metrics: mtx)
+                                        Task { await recomputePreview() }
+                                    }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(on ? .blue : .gray)
+                            }
                         }
                     }
                 }
