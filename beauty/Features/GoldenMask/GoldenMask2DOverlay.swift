@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GoldenMask2DOverlay: View {
     let landmarks: FacialLandmarksResult?
+    init(landmarks: FacialLandmarksResult?) { self.landmarks = landmarks }
     var body: some View {
         GeometryReader { geo in
             // 加载可选的黄金面罩 spec（若存在）
