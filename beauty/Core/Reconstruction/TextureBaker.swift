@@ -14,7 +14,7 @@ enum TextureBaker {
             let s = "albedo placeholder" as NSString
             s.draw(at: CGPoint(x: 12, y: 12), withAttributes: [.foregroundColor: UIColor.white])
         }
-        mesh.albedo = img.cgImage
+        mesh.albedo = img
     }
 }
 
