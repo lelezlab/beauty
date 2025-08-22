@@ -235,6 +235,10 @@ struct EffectDetailView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    // 本地“像谁 Top3”
+                    NavigationLink("术后像谁（离线）") {
+                        CelebMatchView(image: after)
+                    }
                 }
                 // 一致性评分展示
                 if multiViewLinked {
