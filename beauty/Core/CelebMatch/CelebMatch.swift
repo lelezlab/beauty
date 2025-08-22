@@ -4,8 +4,6 @@ import UIKit
 import Vision
 #endif
 
-struct TopMatch: Identifiable { let id: String; let name: String; let score: Float; let thumb: UIImage? }
-
 enum CelebMatch {
     static let indexDir: URL = {
         let d = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("celeb_index", isDirectory: true)
@@ -79,7 +77,7 @@ enum CelebMatch {
         for (i, v) in vectors.enumerated() { if !v.isEmpty { scores.append((i, EmbedSearch.cosine(q, v))) } }
         return scores.sorted { $0.1 > $1.1 }.prefix(topK).map { (idx, s) in
             let e = entries[idx]
-            return TopMatch(id: e.id, name: e.name, score: Float(s), thumb: UIImage(contentsOfFile: e.imagePath))
+            return TopMatch(id: e.id, name: e.name, score: s, thumb: UIImage(contentsOfFile: e.imagePath))
         }
     }
 }
