@@ -11,7 +11,7 @@ enum FaceAlignment {
         var X = zip(sx, sy).map { SIMD2<Double>($0 - msx, $1 - msy) }
         var Y = zip(dx, dy).map { SIMD2<Double>($0 - mdx, $1 - mdy) }
 
-        var cov = double2x2(0)
+        var cov = double2x2(repeating: 0)
         for i in 0..<5 {
             let c0 = SIMD2<Double>(X[i].x * Y[i].x, X[i].y * Y[i].x)
             let c1 = SIMD2<Double>(X[i].x * Y[i].y, X[i].y * Y[i].y)
@@ -20,8 +20,8 @@ enum FaceAlignment {
         var U = double2x2(0), V = double2x2(0)
         var S = SIMD2<Double>(0, 0)
         svd2x2(cov, &U, &S, &V)
-        var R = U * transpose(V)
-        if det(R) < 0 { U[0,1] *= -1; U[1,1] *= -1; R = U * transpose(V) }
+        var R = U * V.transpose
+        if det(R) < 0 { U[0,1] *= -1; U[1,1] *= -1; R = U * V.transpose }
         let varX = X.reduce(0) { $0 + ($1.x * $1.x + $1.y * $1.y) } / 5.0
         let scale = (S.x + S.y) / varX
         let t = SIMD2<Double>(mdx, mdy) - scale * (R * SIMD2<Double>(msx, msy))
