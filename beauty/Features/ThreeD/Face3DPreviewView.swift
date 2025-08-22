@@ -3,6 +3,9 @@ import SwiftUI
 struct Face3DPreviewView: View {
     @State private var meshAvailable: Bool = CaptureStore.shared.lastMesh != nil
     @State private var isComputing: Bool = false
+    @State private var t1: Double = 1.0
+    @State private var t2: Double = 3.0
+    @State private var alpha: Double = 0.95
 
     var body: some View {
         VStack(spacing: 12) {
@@ -25,6 +28,14 @@ struct Face3DPreviewView: View {
                 if isComputing { ProgressView().padding(.leading, 6) }
                 Spacer()
             }
+            // 热力与透明度设置
+            Group {
+                HStack { Text("绿≤"); Slider(value: $t1, in: 0.5...2.0); Text(String(format: "%.1fmm", t1)) }
+                HStack { Text("黄≤"); Slider(value: $t2, in: 2.0...5.0); Text(String(format: "%.1fmm", t2)) }
+                HStack { Text("透明度"); Slider(value: $alpha, in: 0.2...1.0); Text(String(format: "%.2f", alpha)) }
+            }
+            .font(.caption)
+            .padding(.horizontal, 4)
             Text("说明：当前为占位 3D 预览（示例球体）。真机将优先使用 ARKit 网格；无 TrueDepth 时将回退到轻量拟合。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
