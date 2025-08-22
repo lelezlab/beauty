@@ -5,7 +5,7 @@ struct CalibrationState: Codable { let scaleMMPerPixel: Double?; let source: Cal
 
 final class CalibrationManager: ObservableObject {
     static let shared = CalibrationManager()
-    @Published private(set) var state: CalibrationState = Self.load()
+    @Published private(set) var state: CalibrationState = CalibrationManager.load()
 
     private static func load() -> CalibrationState {
         if let data = UserDefaults.standard.data(forKey: "cal_state"), let s = try? JSONDecoder().decode(CalibrationState.self, from: data) { return s }

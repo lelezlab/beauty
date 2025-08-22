@@ -6,7 +6,7 @@ final class LandmarkSmoother {
     private let alpha: CGFloat
     init(alpha: CGFloat = 0.5) { self.alpha = alpha }
 
-    func process(points: [CGPoint], t: TimeInterval) -> [CGPoint] {
+    func process(points: [CGPoint], t: Double) -> [CGPoint] {
         guard !last.isEmpty, last.count == points.count else { last = points; return points }
         var out: [CGPoint] = []
         for i in 0..<points.count {
