@@ -8,8 +8,8 @@ enum FaceAlignment {
         let dx = dst.map { Double($0.x) }, dy = dst.map { Double($0.y) }
         let mean: ([Double]) -> Double = { arr in arr.reduce(0, +) / Double(arr.count) }
         let msx = mean(sx), msy = mean(sy), mdx = mean(dx), mdy = mean(dy)
-        var X = zip(sx, sy).map { SIMD2<Double>($0 - msx, $1 - msy) }
-        var Y = zip(dx, dy).map { SIMD2<Double>($0 - mdx, $1 - mdy) }
+        var X = zip(sx, sy).map { pair -> SIMD2<Double> in SIMD2<Double>(pair.0 - msx, pair.1 - msy) }
+        var Y = zip(dx, dy).map { pair -> SIMD2<Double> in SIMD2<Double>(pair.0 - mdx, pair.1 - mdy) }
 
         var cov = double2x2(columns: (SIMD2<Double>(0,0), SIMD2<Double>(0,0)))
         for i in 0..<5 {
