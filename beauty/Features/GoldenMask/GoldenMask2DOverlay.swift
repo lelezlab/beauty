@@ -49,11 +49,15 @@ struct GoldenMask2DOverlay: View {
                         .background(Circle().fill(color.opacity(0.15)))
                         .frame(width: 10, height: 10)
                         .position(d.point)
-                        .overlay(alignment: .topLeading) {
-                            Text(String(format: "%.1fmm", d.deltaMM)).font(.caption2).foregroundStyle(color)
-                                .padding(2).background(.ultraThinMaterial, in: Capsule())
+                        .overlay(
+                            Text(String(format: "%.1fmm", d.deltaMM))
+                                .font(.caption2)
+                                .foregroundColor(color)
+                                .padding(2)
+                                .background(Capsule().fill(Color.black.opacity(0.2)))
                                 .offset(x: 6, y: -6)
-                        }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        )
                 }
             }
         }
