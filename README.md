@@ -327,6 +327,36 @@
 - `Features/GoldenMask/GoldenMask3DOverlay`：SceneKit 占位（后续接真实网格）
 - 接入：`EffectsGalleryView` 单图预览在开启“叠加黄金比例面罩”时启用 2D Overlay
 
+### 新增：术式库 → 参数映射 → 解剖联动
+
+- `Features/Effects/surgery_catalog.json`：术式 → 参数区间/关联规则/解剖结构
+- `Core/Procedures/SurgeryPlanner`：读取术式并映射到 `Effects` 控件值，按 `AestheticsSafetyConfig` 裁剪
+- `Features/Anatomy/AnatomyStore`/`AnatomyView`：展示对应解剖结构简介，Effects 详情里可一键打开
+
+### 新增：细项分析与“差异热点”
+
+- `AestheticsInsights`：
+  - `styleWords(from:)` 输出风格词（例：窄长脸/上翘鼻尖/下巴后缩）
+  - `hotspots(from:)` 基于黄金面罩偏差输出 Top5 热点
+- `AnalysisView` 中展示风格词与热点列表
+
+### 新增：术后像谁（离线 Demo）
+
+- 完全离线，不引入闭源/外部服务；用户自带授权图库（zip 解压后的目录）
+- 入口：`EffectsGalleryView` 预览下方 → “术后像谁（离线）”
+- 目录结构示例：
+  - `my_celeb/`
+    - `images/` 放若干 jpg/png（如 `a.jpg`）
+    - `names.csv`（UTF-8，无 BOM）：第一行头 `id,name,filename`；示例：
+      - `1,张三,a.jpg`
+      - `2,John Doe,b.jpg`
+- 构建与匹配流程：
+  - 选择解压后的 `my_celeb` 路径 → 构建索引 → 对当前术后图做 Top3 匹配
+- 实现文件：
+  - `Core/CelebMatch/EmbeddingModel.swift`（占位嵌入，16×8 灰度向量 L2 归一）
+  - `Core/CelebMatch/EmbedIndex.swift`（索引构建 + 余弦相似度）
+  - `Features/CelebMatch/CelebMatchView.swift`（UI）
+
 - 导出 & 咨询
   - ✅ 前后对比图 + PDF（水印/免责声明）
   - 🟡 导出样式（LOGO/时间戳/定位/多版式）与一键分享
