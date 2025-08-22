@@ -16,7 +16,7 @@ enum GoldenMaskAlignment3D {
         for i in 0..<src.count { cov += outerProduct(Y[i], X[i]) / n }
         // SVD of cov = U S V^T
         let (U,S,V) = svd3x3(cov)
-        var R = U * V.transpose
+        var R: float3x3 = U * V.transpose
         if det3x3(R) < 0 { var U2 = U; U2[2,2] *= -1; R = U2 * V.transpose }
         let varX = X.reduce(Float(0)) { $0 + dot($1,$1) } / n
         let s = (S[0] + S[1] + S[2]) / varX
