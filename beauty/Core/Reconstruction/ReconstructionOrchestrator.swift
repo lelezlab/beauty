@@ -58,6 +58,18 @@ final class ReconstructionOrchestrator {
             return nil
         }
     }
+
+    // Auto: tri-view preferred when forced or when ARKit unsupported
+    func reconstructAuto() async -> FaceMesh3D? {
+        if AppDebugFlags.forceTriView || !ARFaceTrackingConfiguration.isSupported {
+            if let m = await reconstruct(backend: .decaEdge) { return m }
+            // Show UI banner upstream if needed
+            return await reconstruct(backend: .arkit)
+        } else {
+            if let m = await reconstruct(backend: .arkit) { return m }
+            return await reconstruct(backend: .decaEdge)
+        }
+    }
 }
 
 

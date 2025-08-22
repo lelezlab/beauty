@@ -53,11 +53,16 @@ final class FaceCaptureViewController: UIViewController, ARSessionDelegate {
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
     sceneView.session.pause()
+    ARFaceGeometryCache.shared.clear()
   }
 
   func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
     if let fa = anchors.compactMap({ $0 as? ARFaceAnchor }).first {
       ARFaceGeometryCache.shared.update(from: fa)
     }
+  }
+
+  func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
+    ARFaceGeometryCache.shared.clear()
   }
 }

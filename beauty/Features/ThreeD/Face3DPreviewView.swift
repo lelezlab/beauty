@@ -66,7 +66,10 @@ struct Face3DPreviewView: View {
     private func makeScene(from mesh: FaceMesh3D) -> SCNScene {
         let scene = SCNScene()
         let node = SCNNode()
-        let verts = mesh.vertices.map { SCNVector3($0.x/1000.0, $0.y/1000.0, $0.z/1000.0) }
+        let verts = mesh.vertices.map { v -> SCNVector3 in
+            let m = Units.mmToMeters(v)
+            return SCNVector3(m.x, m.y, m.z)
+        }
         let vsrc = SCNGeometrySource(vertices: verts)
         var sources: [SCNGeometrySource] = [vsrc]
         if let uvs = mesh.uvs {
