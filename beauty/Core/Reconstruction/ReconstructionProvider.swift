@@ -19,6 +19,11 @@ struct CaptureBundle {
     var ipdNorm: Double?
     var camera: CameraParams?
     var qc: BTCaptureQC?
+    // Round 5 additions (optionals to preserve compatibility)
+    var intrinsics: simd_float3x3?
+    var poses: [simd_float4x4]?
+    var qualityScore: Float?
+    var selectedFrameIndices: [Int]?
     init(front: UIImage?, left: UIImage?, right: UIImage?, videoURL: URL?, rawLandmarks: FacialLandmarksResult?, normalizedLandmarks: [String: [[Double]] ]?, ipdNorm: Double?, camera: CameraParams?, qc: BTCaptureQC?) {
         self.front = front; self.left = left; self.right = right; self.videoURL = videoURL
         self.rawLandmarks = rawLandmarks
@@ -35,6 +40,13 @@ struct FaceMesh3D {
     var uvs: [SIMD2<Float>]? 
     var albedo: UIImage?
     var mmPerPixel: Double?
+    // Round 5 extensions (optionals to avoid breaking existing code)
+    var normals: [SIMD3<Float>]? // aligned with vertices
+    var indices: [SIMD3<UInt32>]? // alias for faces, if provided
+    var topologyId: String?
+    var calibrationMMPerPX: Float?
+    var neutralPoseCoeffs: [String: Float]? // expression-neutralized coefficients
+    var metadata: [String: Any]? // anchors3d, debug info, etc.
 }
 
 protocol ReconstructionProvider {

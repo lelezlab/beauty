@@ -6,6 +6,9 @@ struct Face3DPreviewView: View {
     @State private var t1: Double = 1.0
     @State private var t2: Double = 3.0
     @State private var alpha: Double = 0.95
+    @State private var showWireframe: Bool = false
+    @State private var showTexture: Bool = true
+    @State private var beforeAfter: Double = 0.0 // 0 = before, 1 = after (hook)
 
     var body: some View {
         VStack(spacing: 12) {
@@ -27,12 +30,15 @@ struct Face3DPreviewView: View {
                 .disabled(isComputing)
                 if isComputing { ProgressView().padding(.leading, 6) }
                 Spacer()
+                Toggle("线框", isOn: $showWireframe).toggleStyle(.switch)
+                Toggle("纹理", isOn: $showTexture).toggleStyle(.switch)
             }
             // 热力与透明度设置
             Group {
                 HStack { Text("绿≤"); Slider(value: $t1, in: 0.5...2.0); Text(String(format: "%.1fmm", t1)) }
                 HStack { Text("黄≤"); Slider(value: $t2, in: 2.0...5.0); Text(String(format: "%.1fmm", t2)) }
                 HStack { Text("透明度"); Slider(value: $alpha, in: 0.2...1.0); Text(String(format: "%.2f", alpha)) }
+                HStack { Text("术前↔术后"); Slider(value: $beforeAfter, in: 0...1) }
             }
             .font(.caption)
             .padding(.horizontal, 4)
