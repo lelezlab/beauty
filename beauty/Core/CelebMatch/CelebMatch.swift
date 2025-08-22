@@ -14,16 +14,16 @@ enum CelebMatch {
     }()
 
     static func importGallery(zipURL: URL) async throws {
-        // 解压 zip → galleryDir
+        // 简化实现：若传入的是已解压的目录则直接使用；若是 .zip 则记录路径提示用户在 Mac 端解压
         #if canImport(Foundation)
         let dest = indexDir.appendingPathComponent("gallery", isDirectory: true)
         try? FileManager.default.removeItem(at: dest)
         try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
-        if let archive = Archive(url: zipURL, accessMode: .read) {
-            for entry in archive { _ = try? archive.extract(entry, to: dest.appendingPathComponent(entry.path)) }
-        } else {
-            // 若不是 zip，当作文件夹复制
+        if zipURL.hasDirectoryPath {
             _ = try? FileManager.default.copyItem(at: zipURL, to: dest)
+        } else if zipURL.pathExtension.lowercased() == "zip" {
+            let note = "Please extract the ZIP on desktop and re-import the extracted folder. Path: \(zipURL.path)"
+            try? note.data(using: .utf8)?.write(to: dest.appendingPathComponent("IMPORT_NOTE.txt"))
         }
         // 读取 names.csv
         let namesURL = dest.appendingPathComponent("names.csv")
@@ -43,7 +43,7 @@ enum CelebMatch {
         }
         // 构建向量
         let model: AnyFaceEmbedder = (FaceEmbedder() ?? nil) as? AnyFaceEmbedder ?? StubFaceEmbedder()
-        let builder = EmbedIndexBuilder(model: model as! EmbeddingModel ?? StubEmbeddingModel())
+        let builder = EmbedIndexBuilder(model: StubEmbeddingModel())
         let (es, vecs) = builder.build(from: dest)
         // 持久化（简化为 JSON）
         let metaURL = indexDir.appendingPathComponent("entries.json")
