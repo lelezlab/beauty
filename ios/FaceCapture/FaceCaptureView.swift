@@ -6,5 +6,3 @@ public struct FaceCaptureView: UIViewControllerRepresentable {
   public func makeUIViewController(context: Context) -> FaceCaptureViewController { FaceCaptureViewController() }
   public func updateUIViewController(_ uiViewController: FaceCaptureViewController, context: Context) {}
 }
-
-

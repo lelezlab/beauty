@@ -16,6 +16,9 @@ struct MainTabView: View {
 			NavigationStack { HomeView() }
 				.tabItem { Label("首页", systemImage: "sparkles") }
 				.tag(1)
+            NavigationStack { FaceCaptureView() }
+                .tabItem { Label("面诊", systemImage: "camera.viewfinder") }
+                .tag(6)
 			NavigationStack { AssistantTabView() }
 				.tabItem { Label("助手", systemImage: "message.badge.waveform") }
 				.tag(5)
