@@ -1,4 +1,5 @@
 import SwiftUI
+import ARKit
 
 struct DiagnosticsView: View {
   @State private var manifestOK: Bool? = nil

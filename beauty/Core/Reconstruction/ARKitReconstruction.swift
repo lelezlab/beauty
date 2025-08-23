@@ -27,11 +27,11 @@ final class ARKitReconstruction: ReconstructionProvider {
             faces: template.indices ?? [],
             uvs: uvs,
             albedo: nil,
-            mmPerPixel: bundle.calibrationMMPerPX != nil ? Double(bundle.calibrationMMPerPX!) : nil,
+            mmPerPixel: CalibrationManager.shared.state.scaleMMPerPixel,
             normals: nil,
             indices: template.indices,
             topologyId: template.topologyId,
-            calibrationMMPerPX: bundle.calibrationMMPerPX,
+            calibrationMMPerPX: CalibrationManager.shared.state.scaleMMPerPixel != nil ? Float(CalibrationManager.shared.state.scaleMMPerPixel!) : nil,
             neutralPoseCoeffs: nil,
             metadata: ["source": "arkit"]
         )
