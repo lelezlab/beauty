@@ -14,6 +14,7 @@ struct ProofMenu: View {
                 Button("Run MockTrueDepth") { Task { await run(.mockTrueDepth) } }.disabled(running)
                 Button("Run TriView Placeholder") { Task { await run(.triViewEdgePlaceholder) } }.disabled(running)
                 Button("Run BOTH") { Task { await runBoth() } }.disabled(running)
+                if !running && !message.isEmpty { Text("ProofDone").accessibilityIdentifier("ProofDone").hidden() }
             }
             if !message.isEmpty { Text(message).font(.footnote).foregroundStyle(.secondary) }
         }
