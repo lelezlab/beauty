@@ -39,14 +39,14 @@ struct MainTabView: View {
 	private var history: some View { HistoryView() }
 	private var settings: some View {
 		List {
+			Section("Proof Pack") {
+				NavigationLink("Generate Proof Pack") { DeveloperMenuView() }
+			}
 			NavigationLink("语言 / Language") { LanguageSettingsView() }
 			NavigationLink("合规与底线") { ComplianceView().environmentObject(PrivacyManager.shared) }
 			NavigationLink("隐私与数据") { PrivacyDataView() }
 			NavigationLink("开发者参数（黄金法则映射）") { DevTuningView() }
 			NavigationLink("Developer (Celeb)") { DeveloperDebugView() }
-			if DeveloperVisibility.showDeveloper {
-				NavigationLink("Proof Pack") { DeveloperMenuView() }
-			}
 			NavigationLink("Diagnostics") { DiagnosticsView() }
 			NavigationLink("About") { AboutView() }
 			NavigationLink("知识库（远程）") { KnowledgeBrowserView() }
