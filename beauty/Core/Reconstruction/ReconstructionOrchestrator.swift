@@ -1,5 +1,8 @@
 import Foundation
 import UIKit
+#if canImport(ARKit)
+import ARKit
+#endif
 
 enum ReconstructionBackend {
     case arkit
@@ -61,7 +64,14 @@ final class ReconstructionOrchestrator {
 
     // Auto: tri-view preferred when forced or when ARKit unsupported
     func reconstructAuto() async -> FaceMesh3D? {
-        if AppDebugFlags.forceTriView || !ARFaceTrackingConfiguration.isSupported {
+        let arkitAvailable: Bool = {
+            #if canImport(ARKit)
+            return ARFaceTrackingConfiguration.isSupported
+            #else
+            return false
+            #endif
+        }()
+        if AppDebugFlags.forceTriView || !arkitAvailable {
             if let m = await reconstruct(backend: .decaEdge) { return m }
             // Show UI banner upstream if needed
             return await reconstruct(backend: .arkit)
