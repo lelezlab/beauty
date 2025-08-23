@@ -7,7 +7,7 @@ enum DiagnosticsSnapshotter {
         let text = [
             "ARKit available: \(ARFaceTrackingConfiguration.isSupported)",
             "Face frames cached: \(ARFaceGeometryCache.shared.lastGeometry == nil ? false : true)",
-            "Last reconstruction: \(UserDefaults.standard.bool(forKey: \"last_recon_ok\") ? \"ok\" : \"error\")"
+            "Last reconstruction: \(UserDefaults.standard.bool(forKey: "last_recon_ok") ? "ok" : "error")"
         ]
         let size = CGSize(width: 640, height: 180)
         let renderer = UIGraphicsImageRenderer(size: size)
