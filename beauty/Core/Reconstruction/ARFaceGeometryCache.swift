@@ -11,14 +11,12 @@ final class ARFaceGeometryCache {
 
     func update(from anchor: ARFaceAnchor) {
         let g = anchor.geometry
-        let verts: [SIMD3<Float>] = (0..<Int(g.vertexCount)).map { i in
-            let v = g.vertices[i]
-            return SIMD3<Float>(v.x, v.y, v.z)
-        }
-        let triCount = Int(g.triangleCount)
-        let idxBuffer = g.triangleIndices
-        let indices = Array(UnsafeBufferPointer(start: idxBuffer, count: triCount * 3))
-        lastGeometry = (verts, indices, triCount)
+        // vertices may be an Array of simd_float3 on modern SDKs
+        let verts: [SIMD3<Float>] = g.vertices.map { v in SIMD3<Float>(v.x, v.y, v.z) }
+        // triangleIndices may be [Int16]; convert to UInt16
+        let indicesU16: [UInt16] = g.triangleIndices.map { UInt16(bitPattern: $0) }
+        let triCount = indicesU16.count / 3
+        lastGeometry = (verts, indicesU16, triCount)
     }
 
     func clear() { lastGeometry = nil }
