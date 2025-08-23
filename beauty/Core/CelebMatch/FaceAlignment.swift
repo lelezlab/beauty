@@ -49,11 +49,12 @@ func svd2x2(_ m: double2x2, _ U: inout double2x2, _ S: inout SIMD2<Double>, _ V:
     let a=m[0,0], b=m[0,1], c=m[1,0], d=m[1,1]
     let ATA = double2x2(columns: (SIMD2<Double>(a*a+c*c, a*b+c*d),
                                   SIMD2<Double>(a*b+c*d, b*b+d*d)))
-    let tr = ATA[0,0]+ATA[1,1]
-    let detA = ATA[0,0]*ATA[1,1]-ATA[0,1]*ATA[1,0]
-    let tmp = sqrt(max(0,tr*tr/4 - detA))
-    let s1 = sqrt(max(ATA[0,0]+ATA[1,1])/2 + tmp)
-    let s2 = sqrt(max(ATA[0,0]+ATA[1,1])/2 - tmp)
+    let tr = ATA[0,0] + ATA[1,1]
+    let detA = ATA[0,0]*ATA[1,1] - ATA[0,1]*ATA[1,0]
+    let tmp = sqrt(max(0, tr*tr/4 - detA))
+    let halfTr = tr / 2
+    let s1 = sqrt(max(0, halfTr + tmp))
+    let s2 = sqrt(max(0, halfTr - tmp))
     S = SIMD2<Double>(s1,s2)
     var v0 = SIMD2<Double>(ATA[0,1], s1*s1-ATA[0,0])
     if hypot(v0.x, v0.y) < 1e-9 { v0 = SIMD2<Double>(1,0) }

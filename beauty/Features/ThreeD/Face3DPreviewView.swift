@@ -20,7 +20,7 @@ struct Face3DPreviewView: View {
             } else {
                 VStack(spacing: 8) {
                     Text("暂无人脸网格").font(.headline)
-                    Text("请使用带 Face ID 的机型录制；若无 TrueDepth，请开启三视图重建。").font(.footnote).foregroundStyle(.secondary)
+                    Text("当前设备不支持 TrueDepth，且三视图重建未启用。").font(.footnote).foregroundStyle(.secondary)
                 }
                 .frame(height: 220)
                 .frame(maxWidth: .infinity)
