@@ -14,6 +14,7 @@ struct ProofMenu: View {
                 Button("Run MockTrueDepth") { Task { await run(.mockTrueDepth) } }.disabled(running)
                 Button("Run TriView Placeholder") { Task { await run(.triViewEdgePlaceholder) } }.disabled(running)
                 Button("Run BOTH") { Task { await runBoth() } }.disabled(running)
+                Button("分享证明材料") { shareProof() }
                 if !running && !message.isEmpty { Text("ProofDone").accessibilityIdentifier("ProofDone").hidden() }
             }
             if !message.isEmpty { Text(message).font(.footnote).foregroundStyle(.secondary) }
@@ -36,7 +37,19 @@ struct ProofMenu: View {
     }
 
     private func runBoth() async {
-        do { try await run(.mockTrueDepth); try await run(.triViewEdgePlaceholder) } catch {}
+        do { try await run(.mockTrueDepth); try await run(.triViewEdgePlaceholder); await MainActor.run { shareProof() } } catch {}
+    }
+
+    private func shareProof() {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("proof", isDirectory: true)
+        let urls = [
+            docs.appendingPathComponent("mockTrueDepth/demo.mp4"),
+            docs.appendingPathComponent("mockTrueDepth/diagnostics.png"),
+            docs.appendingPathComponent("triView/demo.mp4"),
+            docs.appendingPathComponent("triView/diagnostics.png")
+        ]
+        let av = UIActivityViewController(activityItems: urls, applicationActivities: nil)
+        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.rootViewController?.present(av, animated: true)
     }
 }
 
