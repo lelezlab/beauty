@@ -3,6 +3,9 @@ import UIKit
 
 final class EdgeReconstruction: ReconstructionProvider {
     func reconstruct(from bundle: CaptureBundle) async throws -> FaceMesh3D {
+        if AppDebugFlags.usePlaceholderEdge {
+            throw NSError(domain: "EdgeRecon", code: -12, userInfo: [NSLocalizedDescriptionKey: "Using placeholder Edge (debug)"])
+        }
         // Placeholder: check configuration
         guard let urlStr = Bundle.main.object(forInfoDictionaryKey: "EdgeReconURL") as? String, let _ = URL(string: urlStr) else {
             throw NSError(domain: "EdgeRecon", code: -10, userInfo: [NSLocalizedDescriptionKey: "Edge reconstruction not configured"])

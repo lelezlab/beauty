@@ -1,5 +1,20 @@
 ## beauty 应用页面与交互规划（iOS）
 
+### Proof Pack 一键生成/下载
+
+本地（模拟器或真机均可）：
+
+1. 运行 App → 设置 → 开发者 → Generate Proof Pack
+2. 选择 Run MockTrueDepth / Run TriView Placeholder / Run BOTH
+3. 完成后在 Documents/proof/ 目录下获得：
+   - mockTrueDepth/demo.mp4、mockTrueDepth/diagnostics.png
+   - triView/demo.mp4、triView/diagnostics.png
+
+CI（GitHub Actions）：
+
+1. 在 PR 面板的 Artifacts 下载 `proof-pack`
+2. 内容同上，适用于自动验收
+
 本文件用于追踪页面结构、交互设计与实现进度，覆盖从引导拍摄到美学分析、预设预览与手动编辑的核心流程。
 
 ## 导航结构
