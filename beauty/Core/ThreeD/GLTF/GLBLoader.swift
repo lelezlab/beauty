@@ -17,7 +17,7 @@ enum GLBLoader {
                 SCNSceneSource.LoadingOption.checkConsistency: false,
                 SCNSceneSource.LoadingOption.convertUnitsToMeters: true
             ])
-            guard let s = try src?.scene(options: [
+            guard let s = src?.scene(options: [
                 SCNSceneSource.LoadingOption.createNormalsIfAbsent: true
             ]) else {
                 throw NSError(domain: "glb.parse", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load GLB"])
