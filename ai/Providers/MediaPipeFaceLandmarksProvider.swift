@@ -26,11 +26,16 @@ final class MediaPipeFaceLandmarksProvider: FaceLandmarksProvider {
 
     func detect(in pixelBuffer: CVPixelBuffer) throws -> [CGPoint] {
         guard isReady, initialized else { throw AIErrors.notReady("mediapipe") }
-        let n = 128
-        return (0..<n).map { i in
-            let t = CGFloat(Double(i) / Double(n) * 2 * Double.pi)
-            return CGPoint(x: 0.5 + 0.25 * cos(t), y: 0.5 + 0.25 * sin(t))
+        // For M1, fall back to Vision request using one frame snapshot
+        var points: [CGPoint] = []
+        autoreleasepool {
+            let ci = CIImage(cvPixelBuffer: pixelBuffer)
+            let ctx = CIContext(); if let cg = ctx.createCGImage(ci, from: ci.extent) {
+                let ui = UIImage(cgImage: cg)
+                points = VisionLandmarksHelper.detectNormalizedPoints(from: ui)
+            }
         }
+        return points
     }
 }
 

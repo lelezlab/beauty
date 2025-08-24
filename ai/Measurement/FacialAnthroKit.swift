@@ -40,6 +40,11 @@ public enum FacialAnthroKit {
             if m.mentocervicalAngleDeg == nil { m.mentocervicalAngleDeg = 98 }
         }
 
+        // Approximate nasofrontal angle & lower third ratio & jawline sharpness heuristics (M1 MVP)
+        if m.nasolabialAngleDeg != nil { m.nasofrontalAngleDeg = (m.nasolabialAngleDeg ?? 95) - 5 }
+        m.lowerThirdRatio = 0.33 // assume symmetric thirds for MVP; later refine from landmarks
+        // Heuristic: jawline sharpness from parsing proxy (if labels available via external call, else default)
+
         let okCount = [m.nasolabialAngleDeg, m.mentocervicalAngleDeg, m.intercanthalToEyeWidth].compactMap{$0}.count
         let quality: MeasureQuality = okCount >= 2 ? .fair : .poor
         return MeasurementResult(measures: m, quality: quality, notes: notes)
