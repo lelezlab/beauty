@@ -120,18 +120,22 @@ COMMIT=$(cd "$ROOT_DIR" && git rev-parse --short HEAD 2>/dev/null || echo "unkno
 echo "==> Zipping"
 (cd "$WORK_DIR" && zip -qr "$ZIP_PATH" "$(basename "$PKG_DIR")")
 
-# Include local proof pack if exists (edge_recon) into share zip under Documents/proof/
-DOCS_PROOF="$HOME/Documents/proof/edge_recon"
-if [ -d "$DOCS_PROOF" ]; then
-  if [ -f "$DOCS_PROOF/demo.mp4" ] && [ -f "$DOCS_PROOF/diagnostics.png" ] && [ -f "$DOCS_PROOF/last_job.json" ]; then
-    mkdir -p "$PKG_DIR/Documents/proof/edge_recon"
-    rsync -a "$DOCS_PROOF/" "$PKG_DIR/Documents/proof/edge_recon/"
+# Include local proof artifacts: edge_recon + ai_metrics + mirror + cases
+copy_dir() {
+  local name="$1"
+  local path="$HOME/Documents/proof/$name"
+  local dest="$PKG_DIR/Documents/proof/$name"
+  if [ -d "$path" ]; then
+    mkdir -p "$dest"
+    rsync -a "$path/" "$dest/"
   else
-    echo "edge_recon missing required files in $DOCS_PROOF" >&2; exit 1
+    echo "$name directory not found at $path" >&2
   fi
-else
-  echo "edge_recon directory not found at $DOCS_PROOF" >&2; exit 1
-fi
+}
+copy_dir edge_recon
+copy_dir ai_metrics
+copy_dir mirror
+copy_dir cases
 
 echo "ZIP_PATH=$ZIP_PATH"
 FINAL_REPORT="$OUT_DIR/share-pack-report.md"
