@@ -11,10 +11,27 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+      - name: Env info
+        run: |
+          set -euo pipefail
+          echo "### Runner Versions" >> $GITHUB_STEP_SUMMARY
+          echo "\n\n\`xcodebuild -version\`" >> $GITHUB_STEP_SUMMARY
+          xcodebuild -version | sed 's/^/> /'
+          echo "\n\nXcode path:" >> $GITHUB_STEP_SUMMARY
+          xcode-select -p | sed 's/^/> /'
+          echo "\n\nSwift:" >> $GITHUB_STEP_SUMMARY
+          swift --version | sed 's/^/> /'
+          echo "\n\nPython:" >> $GITHUB_STEP_SUMMARY
+          python3 --version | sed 's/^/> /'
+          echo "\n\nPip onnx/coreml/mediapipe:" >> $GITHUB_STEP_SUMMARY
+          pip3 list | grep -E 'onnx|coreml|mediapipe' | sed 's/^/> /' || true
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
       - name: Prepare scripts
         run: |
+          set -euo pipefail
           mkdir -p scripts
           cat > scripts/choose-simulator.sh <<'EOS'
           set -euo pipefail
@@ -30,20 +47,29 @@ jobs:
       - name: Pick latest iPhone simulator
         run: bash ./scripts/choose-simulator.sh
       - name: Resolve Packages
-        run: xcodebuild -resolvePackageDependencies -scheme beauty
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies -scheme beauty
       - name: Sync models (spec→lock)
         run: |
+          set -euo pipefail
           python3 -m pip install -U requests onnx onnxsim coremltools mediapipe
           python3 scripts/models_sync.py --mirror-base "${{ secrets.MODEL_MIRROR_BASE }}"
       - name: Validate models lock
         run: |
+          set -euo pipefail
           test -f Resources/Models/models.lock.json
       - name: Build for testing
-        run: xcodebuild -scheme beauty -sdk iphonesimulator -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" build-for-testing
+        run: |
+          set -euo pipefail
+          xcodebuild -scheme beauty -sdk iphonesimulator -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" build-for-testing
       - name: Validate models via UnitTest
-        run: xcodebuild -scheme beauty -sdk iphonesimulator -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" test -only-testing:ModelLockTests
+        run: |
+          set -euo pipefail
+          xcodebuild -scheme beauty -sdk iphonesimulator -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" -enableCodeCoverage YES test -only-testing:ModelLockTests
       - name: Run ProofPack tests (auto run BOTH in app)
         run: |
+          set -euo pipefail
           xcodebuild \
             -scheme beauty \
             -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" \
@@ -68,6 +94,7 @@ jobs:
           path: edge_mock_result.json
       - name: Archive proof artifacts
         run: |
+          set -euo pipefail
           PROOF_DIR=$(find DerivedData -type d -path "*/Containers/Data/Documents/proof" | head -n 1)
           if [ -n "$PROOF_DIR" ]; then
             (cd "$PROOF_DIR/.." && zip -r proof-pack.zip proof)
@@ -83,7 +110,9 @@ jobs:
           mkdir -p "$HOME/Documents/proof"
           if [ -n "$PROOF_DIR" ]; then rsync -a "$PROOF_DIR/" "$HOME/Documents/proof/"; fi
       - name: Build share pack
-        run: bash scripts/share_pack.sh
+        run: |
+          set -euo pipefail
+          bash scripts/share_pack.sh
       - name: Collect share zip
         run: |
           SHARE=$(ls -t "$HOME/Documents/share"/beauty-share-*.zip | head -n 1)
@@ -96,7 +125,8 @@ jobs:
           path: share.zip
       - name: proof-pack contents check
         run: |
-          set -e
+          set -euo pipefail
+          test -f proof-pack.zip && test -f share.zip && test -f edge_mock_result.json
           unzip -l proof-pack.zip | tee manifest.txt
           for f in edge_recon/demo.mp4 edge_recon/diagnostics.png edge_recon/last_job.json; do
             grep -q "$f$" manifest.txt || { echo "missing $f"; exit 1; }
@@ -111,7 +141,7 @@ jobs:
       - name: Compute hashes and sizes
         id: hashes
         run: |
-          set -e
+          set -euo pipefail
           PROOF_SHA=$(shasum -a 256 proof-pack.zip | awk '{print $1}')
           PROOF_SZ=$(wc -c < proof-pack.zip)
           EDGE_SHA=$(shasum -a 256 edge_mock_result.json | awk '{print $1}')
@@ -127,6 +157,22 @@ jobs:
           echo "proof-pack.zip: sha256=$PROOF_SHA size=$PROOF_SZ" >> $GITHUB_STEP_SUMMARY
           echo "edge_mock_result.json: sha256=$EDGE_SHA size=$EDGE_SZ" >> $GITHUB_STEP_SUMMARY
           echo "share.zip: sha256=$SHARE_SHA size=$SHARE_SZ" >> $GITHUB_STEP_SUMMARY
+      - name: Gather debug logs
+        if: ${{ failure() || always() }}
+        run: |
+          set -euo pipefail
+          mkdir -p debug
+          LOG=$(ls -t DerivedData/Logs/Build/*.xcactivitylog 2>/dev/null | head -n 1 || true)
+          if [ -n "$LOG" ]; then /usr/bin/tail -n 200 "$LOG" > debug/build_tail.txt || true; fi
+          if [ -d "$HOME/Documents/proof" ]; then (cd "$HOME/Documents" && zip -r ../proof-debug.zip proof); mv "$HOME/proof-debug.zip" ./proof-debug.zip; fi
+      - name: Upload debug logs
+        if: ${{ failure() || always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof-debug
+          path: |
+            debug
+            proof-debug.zip
       - name: Comment artifacts on PR
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/github-script@v7
