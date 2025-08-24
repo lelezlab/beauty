@@ -11,9 +11,9 @@ enum TriViewSampleProvider {
         let docFront = docs.appendingPathComponent("tri_front.jpg")
         let docLeft  = docs.appendingPathComponent("tri_left.jpg")
         let docRight = docs.appendingPathComponent("tri_right.jpg")
-        func downscale(_ img: UIImage, max: CGFloat = 1024) -> UIImage {
+        func downscale(_ img: UIImage, maxDim: CGFloat = 1024) -> UIImage {
             let w = img.size.width, h = img.size.height
-            let scale = min(1.0, max / max(w, h))
+            let scale = Swift.min(CGFloat(1.0), maxDim / Swift.max(w, h))
             if scale >= 1.0 { return img }
             let size = CGSize(width: w*scale, height: h*scale)
             let r = UIGraphicsImageRenderer(size: size)
@@ -22,9 +22,9 @@ enum TriViewSampleProvider {
         let front0 = (bundleFront ?? (FileManager.default.fileExists(atPath: docFront.path) ? docFront : nil)).flatMap { UIImage(contentsOfFile: $0.path) } ?? synthesize(label: "FRONT", color: .systemTeal)
         let left0  = (bundleLeft  ?? (FileManager.default.fileExists(atPath: docLeft.path)  ? docLeft  : nil)).flatMap { UIImage(contentsOfFile: $0.path) } ?? synthesize(label: "LEFT", color: .systemBlue)
         let right0 = (bundleRight ?? (FileManager.default.fileExists(atPath: docRight.path) ? docRight : nil)).flatMap { UIImage(contentsOfFile: $0.path) } ?? synthesize(label: "RIGHT", color: .systemGreen)
-        let front = downscale(front0)
-        let left  = downscale(left0)
-        let right = downscale(right0)
+        let front = downscale(front0, maxDim: 1024)
+        let left  = downscale(left0, maxDim: 1024)
+        let right = downscale(right0, maxDim: 1024)
         var b = ReconstructionOrchestrator.shared.buildBundleFromCapture()
         b.front = front; b.left = left; b.right = right
         do {
