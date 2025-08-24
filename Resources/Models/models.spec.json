@@ -33,6 +33,15 @@
       "postprocess": ["onnxsim"],
       "license": "MIT",
       "dest": "Resources/Models/face_parsing/bisenet_fp16.onnx"
+    },
+    {
+      "id": "deca",
+      "task": "face_3d_reconstruction",
+      "format": "onnx",
+      "source": { "type": "convert_from_repo", "repo": "YadiraF/DECA", "weights_hint": "deca_model.tar" },
+      "postprocess": ["onnxsim"],
+      "license": "Non-commercial",
+      "dest": "Resources/Models/deca/deca.onnx"
     }
   ]
 }

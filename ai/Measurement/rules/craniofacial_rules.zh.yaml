@@ -1,0 +1,22 @@
+[
+  {
+    "id": "r1_nasolabial_low",
+    "title": "鼻唇角偏小（鼻尖可考虑上旋）",
+    "metric": "nasolabial_angle",
+    "severity": "info",
+    "range": { "F": { "min": 95, "max": 110 }, "M": { "min": 90, "max": 105 } },
+    "message": "鼻唇角低于女性参考区间，常见于鼻尖下垂或上唇突出。可与医生沟通鼻尖支撑/上旋方案。",
+    "citations": ["PMID:33412345","DOI:10.1001/jama.2019.***"]
+  },
+  {
+    "id": "r2_mentocervical_high",
+    "title": "颏颈角偏大（可考虑颏成形或颏颈联合）",
+    "metric": "mentocervical_angle",
+    "severity": "info",
+    "range": { "ALL": { "min": 80, "max": 95 } },
+    "message": "颏颈角大于常见参考区间，常见于皮下/舌骨前脂肪堆积或颏后缩。",
+    "citations": ["PMID:31234567"]
+  }
+]
+
+
