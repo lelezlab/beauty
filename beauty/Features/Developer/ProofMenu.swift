@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreGraphics
 
 struct ProofMenu: View {
     @State private var running = false
@@ -16,6 +17,12 @@ struct ProofMenu: View {
                 Button("Run MockTrueDepth") { Task { await run(.mockTrueDepth) } }.disabled(running)
                 Button("Run TriView Placeholder") { Task { await run(.triViewEdgePlaceholder) } }.disabled(running)
                 Button("Run BOTH") { Task { await runBoth() } }.disabled(running)
+                Button("Run GoldenMask Demo") { Task { await runGolden() } }.disabled(running)
+                Button("Run Edge Recon Demo") { Task { let _ = try? await ProofProducer.produceEdgeReconDemo() ; await MainActor.run { message = "Edge Recon Demo done" } } }.disabled(running)
+                Button("分享证明材料") { shareProof() }
+                if !running && !message.isEmpty { Text("ProofDone").accessibilityIdentifier("ProofDone").hidden() }
+            }
+            Section("AI Utilities") {
                 Button("Warmup AI Providers") { Task { await AIOrchestrator.shared.warmupAll(); await MainActor.run { message = "AI warmed" } } }
                 Button("Run AI Metrics") {
                     let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -25,14 +32,12 @@ struct ProofMenu: View {
                     ProofProducer().produceAIMetricsProof(mesh: mesh, landmarks: landmarks, outDir: out)
                     message = "AI metrics generated at \(out.path)"
                 }
-                Button("Run GoldenMask Demo") { Task { await runGolden() } }.disabled(running)
-                Button("Run Edge Recon Demo") { Task { let _ = try? await ProofProducer.produceEdgeReconDemo() ; await MainActor.run { message = "Edge Recon Demo done" } } }.disabled(running)
-                Button("分享证明材料") { shareProof() }
+            }
+            Section("Maintenance") {
                 Button("导出调试日志") { shareDebugLog() }
                 Button("清空调试日志") { DebugLog.clear() }
                 Button("Clear ReconCache") { clearReconCache() }
                 Button("Re-Fetch Models & Re-Run Edge Demo") { Task { _ = await ModelFetcher.fetchAll(); let _ = try? await ProofProducer.produceEdgeReconDemo(); await MainActor.run { message = "Models fetched & Edge demo regenerated" } } }
-                if !running && !message.isEmpty { Text("ProofDone").accessibilityIdentifier("ProofDone").hidden() }
             }
             Section("自动化") {
                 Toggle("自动运行", isOn: $autoProof)
