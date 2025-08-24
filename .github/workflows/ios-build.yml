@@ -56,4 +56,11 @@ jobs:
         run: |
           # Report issues in GitHub Actions log but do not fail the build yet
           swiftlint --reporter github-actions-logging || true
+# after: 
+#   - name: Checkout
+#     uses: actions/checkout@v4
 
+- name: Select Xcode 16
+  uses: maxim-lobanov/setup-xcode@v1
+  with:
+    xcode-version: '16'   # 或者写具体小版本，例如 '16.0'
