@@ -78,7 +78,7 @@ final class RemoteEdgeClient: ReconstructionProvider {
         if let jd = try? JSONSerialization.data(withJSONObject: ["id": jobId, "outputs": outs], options: [.prettyPrinted]) { try? jd.write(to: last) }
 
         // 6) parse glb → FaceMesh3D
-        if let g = glbURL {
+        if let g = glbURL, !AppFlags.isProofRunning {
             do {
                 let node = try GLBLoader.loadFaceNode(from: g)
                 if let geo = node.geometry ?? node.childNodes.first?.geometry {

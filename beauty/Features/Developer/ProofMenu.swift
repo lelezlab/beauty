@@ -35,7 +35,10 @@ struct ProofMenu: View {
                     let out = docs.appendingPathComponent("proof/ai_metrics", isDirectory: true)
                     let mesh: FaceMesh3D? = nil
                     let landmarks: [CGPoint]? = nil
-                    ProofProducer().produceAIMetricsProof(mesh: mesh, landmarks: landmarks, outDir: out)
+                    // Run metrics in a background autoreleasepool and on a blank context
+                    autoreleasepool {
+                        ProofProducer().produceAIMetricsProof(mesh: mesh, landmarks: landmarks, outDir: out)
+                    }
                     message = "AI metrics generated at \(out.path)"
                 }
             }

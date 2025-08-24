@@ -3,6 +3,10 @@ import SceneKit
 
 enum GLBLoader {
     static func loadFaceNode(from url: URL) throws -> SCNNode {
+        // During Proof/AI metrics, avoid heavy GLB parsing entirely
+        if AppFlags.isProofRunning {
+            throw NSError(domain: "glb.pause", code: -999, userInfo: [NSLocalizedDescriptionKey: "Parsing paused while proof running"])
+        }
         // Prefer GLTF (.glb/.gltf) via GLTFSceneKit if available
         #if canImport(GLTFSceneKit)
         if let scene = try? GLTFSceneSource(url: url).scene() { return scene.rootNode }
