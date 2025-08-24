@@ -6,6 +6,8 @@ import SwiftUI
 final class FaceCaptureViewController: UIViewController, ARSessionDelegate {
   private let sceneView = ARSCNView(frame: .zero)
   private var overlayHost: UIHostingController<FaceLineOverlay>?
+  private var lastUpdateTime: TimeInterval = 0
+  private let maxUpdateFPS: Double = 30.0
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -26,10 +28,8 @@ final class FaceCaptureViewController: UIViewController, ARSessionDelegate {
     overlayHost = host
 
     if !ARFaceTrackingConfiguration.isSupported {
-      // Non-TrueDepth devices: keep only camera preview from other flows; overlay still shows guides
       sceneView.isHidden = true
       host.view.isHidden = false
-      // TODO: show a banner to guide tri-view capture
     }
   }
 
@@ -57,9 +57,11 @@ final class FaceCaptureViewController: UIViewController, ARSessionDelegate {
   }
 
   func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
-    if let fa = anchors.compactMap({ $0 as? ARFaceAnchor }).first {
-      ARFaceGeometryCache.shared.update(from: fa)
-    }
+    guard let fa = anchors.compactMap({ $0 as? ARFaceAnchor }).first else { return }
+    let now = CACurrentMediaTime()
+    if now - lastUpdateTime < 1.0 / maxUpdateFPS { return }
+    lastUpdateTime = now
+    ARFaceGeometryCache.shared.update(from: fa)
   }
 
   func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {

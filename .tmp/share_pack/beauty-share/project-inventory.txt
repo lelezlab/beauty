@@ -1,0 +1,102 @@
+# Project Inventory
+Generated: Sat Aug 23 16:35:09 PDT 2025
+
+## Xcode Targets & Schemes
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -list
+
+Information about project "beauty":
+    Targets:
+        beauty
+        beautyTests
+        beautyUITests
+
+    Build Configurations:
+        Debug
+        Release
+
+    If no build configuration is specified and -scheme is not passed then "Release" is used.
+
+    Schemes:
+        beauty
+
+
+## Swift files distribution
+  13 beauty/Core/Reconstruction/
+  10 beauty/Views/Settings/
+   8 beauty/Core/Telemetry/
+   7 beauty/Core/Demo/
+   7 beauty/Core/CelebMatch/
+   6 beauty/Core/ThreeD/
+   6 beauty/Core/RemoteEffects/
+   6 beauty/Core/AI/
+   5 beauty/ios/FaceCapture/
+   5 beauty/Core/Measurements/
+   5 beauty/Core/GoldenMask/
+   5 beauty/Core/AIProviders/
+   4 beauty/Views/Analysis/
+   4 beauty/ios/Common/
+   4 beauty/Core/VideoCapture/
+   3 beauty/Views/Home/
+   3 beauty/Core/Utils/
+   3 beauty/Core/Deform/
+   3 beauty/Core/Config/
+   3 beauty/Core/Acquisition/
+   3 beauty/
+   2 beauty/Views/Onboarding/
+   2 beauty/Views/Calibration/
+   2 beauty/Tests/
+   2 beauty/Features/GoldenMask/
+   2 beauty/Features/Clinician/
+   2 beauty/Features/Anatomy/
+   2 beauty/Features/
+   2 beauty/Core/Services/
+   2 beauty/Core/Procedures/
+   2 beauty/Core/Knowledge/
+   2 beauty/Core/Export/
+   2 beauty/Core/Editing/
+   2 beauty/Core/Analysis/GoldenRules/
+   1 beauty/Views/Root/
+   1 beauty/Views/Results/
+   1 beauty/Views/Procedures/
+   1 beauty/Views/History/
+   1 beauty/Views/Editing/
+   1 beauty/Views/Camera/
+   1 beauty/Views/Auth/
+   1 beauty/UnitTests/
+   1 beauty/UITests/
+   1 beauty/Models/
+   1 beauty/ios/FaceCapture/Overlay/
+   1 beauty/Features/ThreeD/
+   1 beauty/Features/Privacy/
+   1 beauty/Features/Effects/
+   1 beauty/Features/Developer/
+   1 beauty/Features/CelebMatch/
+   1 beauty/DevTools/Screenshots/
+   1 beauty/DevTools/Evaluation/
+   1 beauty/Core/Vision/
+   1 beauty/Core/Texture/
+   1 beauty/Core/Results/
+   1 beauty/Core/Privacy/
+   1 beauty/Core/Location/
+   1 beauty/Core/Localization/
+   1 beauty/Core/Diagnostics/
+   1 beauty/Core/Consent/
+   1 beauty/Core/Capture/
+   1 beauty/Core/Camera/
+   1 beauty/Core/Calibration/
+   1 beauty/Core/Auth/
+   1 beauty/Core/App/
+   1 beauty/Core/Analysis/
+   1 beauty/Core/AB/
+   1 beauty/Config/
+
+## Package.resolved summary
+
+## Podfile snapshot
+No Podfile
+
+## Main Info.plist keys
+File Doesn't Exist, Will Create: /Users/zhangliyuan/Desktop/beauty/beauty/beauty/Info.plist
+File Doesn't Exist, Will Create: /Users/zhangliyuan/Desktop/beauty/beauty/beauty/Info.plist
+File Doesn't Exist, Will Create: /Users/zhangliyuan/Desktop/beauty/beauty/beauty/Info.plist

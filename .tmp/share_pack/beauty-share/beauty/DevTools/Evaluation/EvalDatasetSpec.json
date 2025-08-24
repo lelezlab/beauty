@@ -1,0 +1,12 @@
+{
+  "root": "EvalSamples/",
+  "items": [
+    {
+      "id": "S001",
+      "front": "S001/front.jpg",
+      "left": "S001/left.jpg",
+      "right": "S001/right.jpg",
+      "metrics": { "goode_ratio": 0.56, "nasolabial_angle_deg": 101.0 }
+    }
+  ]
+}

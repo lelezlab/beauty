@@ -6,6 +6,12 @@ struct BeautyApp: App {
   init() {
     Task { await RulesStore.shared.fetch() }
     MetricKitManager.shared.activate()
+    // Auto model fetch on launch (zero-interaction)
+    Task {
+      let ok = await ModelFetcher.fetchAll()
+      UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "models_fetch_time")
+      UserDefaults.standard.set(ok, forKey: "models_fetch_ok")
+    }
     Task.detached {
       guard let u = URL(string: (UserDefaults.standard.string(forKey: "FlagsURL") ?? "")), !u.absoluteString.isEmpty else { return }
       if let (d, _) = try? await URLSession.shared.data(from: u),

@@ -42,9 +42,13 @@ struct MainTabView: View {
 			Section("Proof Pack") {
 				NavigationLink("Generate Proof Pack") { DeveloperMenuView() }
 			}
+			Section("AI / 相似度") {
+				NavigationLink("术后像谁（离线/远端）") { CelebTopKView() }
+			}
 			NavigationLink("语言 / Language") { LanguageSettingsView() }
 			NavigationLink("合规与底线") { ComplianceView().environmentObject(PrivacyManager.shared) }
 			NavigationLink("隐私与数据") { PrivacyDataView() }
+			NavigationLink("隐私中心") { PrivacyCenterView() }
 			NavigationLink("开发者参数（黄金法则映射）") { DevTuningView() }
 			NavigationLink("Developer (Celeb)") { DeveloperDebugView() }
 			NavigationLink("Diagnostics") { DiagnosticsView() }
@@ -100,7 +104,7 @@ private struct CaptureModeSwitcher: View {
                     // 完成三帧后触发 3D 重建（占位后台）；若 QC 不足则优雅降级
                     let qcOK = (ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.3, exposureMean: 0.6, faceCoverage: 0.5, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))) >= 0.5
                     if qcOK {
-                        Task { _ = await ReconstructionOrchestrator.shared.reconstruct(backend: .arkit) }
+                        Task { _ = await ReconstructionOrchestrator.shared.reconstructAuto() }
                     }
                 }
             } else {
@@ -108,7 +112,7 @@ private struct CaptureModeSwitcher: View {
                     front = f; left = l; right = r; goAnalysis = false; go3DPreview = true
                     let qcOK = (ConfidenceEstimator.score(from: BeautyTelemetryService.shared.lastQC ?? BTCaptureQC(blurScore: 0.3, exposureMean: 0.6, faceCoverage: 0.5, yaw: nil, pitch: nil, roll: nil, focalEq: nil, distanceBucket: 3, aeLocked: nil, awbLocked: nil, alignScore: 0.6))) >= 0.5
                     if qcOK {
-                        Task { _ = await ReconstructionOrchestrator.shared.reconstruct(backend: .arkit) }
+                        Task { _ = await ReconstructionOrchestrator.shared.reconstructAuto() }
                     }
                 }
             }

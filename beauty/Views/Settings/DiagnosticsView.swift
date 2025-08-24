@@ -2,71 +2,138 @@ import SwiftUI
 import ARKit
 
 struct DiagnosticsView: View {
-  @State private var manifestOK: Bool? = nil
-  @State private var rulesOK: Bool? = nil
-  @State private var kbOK: Bool? = nil
-  @State private var messages: [String] = []
+  @State private var arkit: Bool = ARFaceTrackingConfiguration.isSupported
+  @State private var framesCached: Bool = ARFaceGeometryCache.shared.lastGeometry != nil
+  @State private var lastReconOK: Bool = UserDefaults.standard.bool(forKey: "last_recon_ok")
+  @State private var modelsLoaded: Bool = false
+  @State private var facemeshStatus: String = "-"
+  @State private var arcfaceStatus: String = "-"
+  @State private var parsingStatus: String = "-"
+  @State private var midasStatus: String = "-"
+  @State private var lastFetchOK: Bool = UserDefaults.standard.bool(forKey: "models_fetch_ok")
+  @State private var tier: PerfTier = AIRouter.tier()
+  @State private var useEdgeRecon: Bool = AIRouter.useEdge(for: .reconstruction3D)
+  @State private var useEdgeParsing: Bool = AIRouter.useEdge(for: .faceParsing)
+  @State private var useEdgeDepth: Bool = AIRouter.useEdge(for: .midasDepth)
+  @State private var lastFPS: Double = UserDefaults.standard.double(forKey: "ai_last_fps")
+  @State private var lastLatency: Double = UserDefaults.standard.double(forKey: "ai_last_latency_ms")
+  @State private var lastThermalSerious: Bool = UserDefaults.standard.bool(forKey: "ai_last_thermal_serious")
+  @State private var maskOverlayOK: Bool = true
+  @State private var parsingOK: Bool = true
+  @State private var depthOK: Bool = true
+  @State private var unitsOK: Bool = true
+  @State private var edgeProvider: String = (UserDefaults.standard.string(forKey: "edge_provider") ?? "mock")
+  @State private var edgeLast: Bool = UserDefaults.standard.bool(forKey: "edge_last_ok")
+  @State private var edgeJobId: String = (UserDefaults.standard.string(forKey: "edge_job_id") ?? "-")
+  @State private var edgeLastResult: String = (UserDefaults.standard.string(forKey: "edge_last_result") ?? "-")
+  @State private var edgeCachePath: String = {
+    if let id = UserDefaults.standard.string(forKey: "edge_job_id"), !id.isEmpty {
+      let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+      return base.appendingPathComponent("ReconCache/\(id)").path
+    }
+    return "-"
+  }()
+  @State private var edgeLatencyMs: Double = UserDefaults.standard.double(forKey: "edge_latency_ms")
+  @State private var edgeGLBSize: Int = UserDefaults.standard.integer(forKey: "edge_glb_size")
+  @State private var edgeTexSize: Int = UserDefaults.standard.integer(forKey: "edge_tex_size")
+  @State private var edgeErrDomain: String = (UserDefaults.standard.string(forKey: "edge_error_domain") ?? "-")
+  @State private var edgeErrMessage: String = (UserDefaults.standard.string(forKey: "edge_error_message") ?? "-")
 
   var body: some View {
     List {
-      Section("Connectivity") {
-        row("Manifest /latest", manifestOK)
-        row("Clinical Rules", rulesOK)
-        row("KB Docs", kbOK)
-        HStack { Text("ARKit available"); Spacer(); Text(ARFaceTrackingConfiguration.isSupported ? "true" : "false").foregroundStyle(.secondary) }
-        HStack { Text("Face frames cached"); Spacer(); Text(ARFaceGeometryCache.shared.lastGeometry == nil ? "false" : "true").foregroundStyle(.secondary) }
-        HStack { Text("Last reconstruction"); Spacer(); Text(UserDefaults.standard.bool(forKey: "last_recon_ok") ? "ok" : "-").foregroundStyle(.secondary) }
+      Section("Runtime") {
+        rowBool("ARKit available", arkit)
+        rowBool("Face frames cached", framesCached)
+        rowBool("Last reconstruction ok", lastReconOK)
       }
-      Section("Logs") {
-        ForEach(messages, id:\.self) { Text($0).font(.footnote).foregroundStyle(.secondary) }
+      Section("Mask/Parsing/Depth") {
+        rowBool("Mask overlay", maskOverlayOK)
+        rowBool("Parsing", parsingOK)
+        rowBool("Depth", depthOK)
+        rowBool("Units (mm→m)", unitsOK)
       }
-      Button("Run All Checks") { Task { await runChecks() } }
+      Section("Edge Provider") {
+        copyRow("Edge provider", edgeProvider)
+        copyRow("Edge job id", edgeJobId)
+        copyRow("Edge last_result", edgeLastResult)
+        copyRow("Edge cache path", edgeCachePath)
+        copyRow("Edge latency(ms)", String(format: "%.0f", edgeLatencyMs))
+        copyRow("GLB size(bytes)", String(edgeGLBSize))
+        copyRow("Texture size(bytes)", String(edgeTexSize))
+        copyRow("Edge error", edgeErrDomain + ": " + edgeErrMessage)
+      }
+      Section("Models") {
+        rowBool("Models lock loaded", modelsLoaded)
+        rowText("facemesh_mediapipe_task", facemeshStatus)
+        rowText("arcface_ir50", arcfaceStatus)
+        rowText("face_parsing_bisenet", parsingStatus)
+        rowText("midas_s", midasStatus)
+        rowBool("Last Re-Fetch ok", lastFetchOK)
+        Button("Re-Fetch Models (mirror)") { Task { _ = await ModelFetcher.fetchAll(); UserDefaults.standard.set(Date(), forKey: "models_refetch_ts"); refresh() } }
+      }
+      Section("AI Router") {
+        HStack { Text("Perf tier"); Spacer(); Text(tier.rawValue) }
+        rowBool("Edge: 3D Recon", useEdgeRecon)
+        rowBool("Edge: Face Parsing", useEdgeParsing)
+        rowBool("Edge: Depth", useEdgeDepth)
+        HStack { Text("Last FPS"); Spacer(); Text(String(format: "%.1f", lastFPS)) }
+        HStack { Text("Last Latency (ms)"); Spacer(); Text(String(format: "%.0f", lastLatency)) }
+        rowBool("Thermal serious", lastThermalSerious)
+      }
     }
     .navigationTitle("Diagnostics")
-    .onAppear { if AppFeatureFlags.enableDiagnostics { Task { await runChecks() } } }
+    .onAppear { refresh() }
   }
 
-  func row(_ title: String, _ ok: Bool?) -> some View {
-    HStack { Text(title)
-      Spacer()
-      if ok == nil { ProgressView() }
-      else if ok == true { Image(systemName: "checkmark.seal.fill").foregroundStyle(.green) }
-      else { Image(systemName: "xmark.seal.fill").foregroundStyle(.red) }
-    }
+  private func refresh() {
+    arkit = ARFaceTrackingConfiguration.isSupported
+    framesCached = ARFaceGeometryCache.shared.lastGeometry != nil
+    lastReconOK = UserDefaults.standard.bool(forKey: "last_recon_ok")
+    // lock existence
+    modelsLoaded = (Bundle.main.url(forResource: "models.lock", withExtension: "json", subdirectory: "Resources/Models") != nil) || (Bundle.main.url(forResource: "models.lock", withExtension: "json", subdirectory: "Models") != nil)
+    facemeshStatus = statusFor("facemesh_mediapipe_task")
+    arcfaceStatus = statusFor("arcface_ir50")
+    parsingStatus = statusFor("face_parsing_bisenet")
+    midasStatus = statusFor("midas_s")
+    lastFetchOK = UserDefaults.standard.bool(forKey: "models_fetch_ok")
+    tier = AIRouter.tier()
+    useEdgeRecon = AIRouter.useEdge(for: .reconstruction3D)
+    useEdgeParsing = AIRouter.useEdge(for: .faceParsing)
+    useEdgeDepth = AIRouter.useEdge(for: .midasDepth)
+    lastFPS = UserDefaults.standard.double(forKey: "ai_last_fps")
+    lastLatency = UserDefaults.standard.double(forKey: "ai_last_latency_ms")
+    lastThermalSerious = UserDefaults.standard.bool(forKey: "ai_last_thermal_serious")
+    edgeProvider = (UserDefaults.standard.string(forKey: "edge_provider") ?? edgeProvider)
+    edgeJobId = (UserDefaults.standard.string(forKey: "edge_job_id") ?? edgeJobId)
+    edgeLastResult = (UserDefaults.standard.string(forKey: "edge_last_result") ?? edgeLastResult)
+    edgeLatencyMs = UserDefaults.standard.double(forKey: "edge_latency_ms")
+    edgeGLBSize = UserDefaults.standard.integer(forKey: "edge_glb_size")
+    edgeTexSize = UserDefaults.standard.integer(forKey: "edge_tex_size")
+    edgeErrDomain = (UserDefaults.standard.string(forKey: "edge_error_domain") ?? edgeErrDomain)
+    edgeErrMessage = (UserDefaults.standard.string(forKey: "edge_error_message") ?? edgeErrMessage)
   }
 
-  func log(_ s:String){ DispatchQueue.main.async { messages.append(s) } }
+  private func statusFor(_ id: String) -> String {
+    do { _ = try ModelRegistry.path(for: id); return "ok" }
+    catch let e as ModelError {
+      switch e {
+      case .fileMissing: return "missing"
+      case .hashMismatch: return "hashMismatch"
+      default: return "error"
+      }
+    } catch { return "error" }
+  }
 
-  func runChecks() async {
-    messages.removeAll()
-    // Manifest
-    if let u = URL(string: AppConfig.manifestURL), !AppConfig.manifestURL.contains("<") {
-      do { let (_, r) = try await URLSession.shared.data(from: u); manifestOK = (r as? HTTPURLResponse)?.statusCode == 200; log("Manifest status: \((r as? HTTPURLResponse)?.statusCode ?? -1)") }
-      catch { manifestOK = false; log("Manifest error: \(error.localizedDescription)") }
-    } else { manifestOK = false; log("Manifest URL not configured") }
-
-    // Rules
-    if !AppConfig.supabaseBase.contains("<") {
-      do {
-        var req = URLRequest(url: URL(string: "\(AppConfig.supabaseBase)/rest/v1/clinical_rules?select=id&limit=1")!)
-        req.addValue(AppConfig.anonKey, forHTTPHeaderField: "apikey")
-        req.addValue("Bearer \(AppConfig.anonKey)", forHTTPHeaderField: "Authorization")
-        let (_, r) = try await URLSession.shared.data(for: req)
-        rulesOK = (r as? HTTPURLResponse)?.statusCode == 200; log("Rules status: \((r as? HTTPURLResponse)?.statusCode ?? -1)")
-      } catch { rulesOK = false; log("Rules error: \(error.localizedDescription)") }
-    } else { rulesOK = false; log("Supabase not configured") }
-
-    // KB
-    if !AppConfig.supabaseBase.contains("<") {
-      do {
-        let url = URL(string:"\(AppConfig.supabaseBase)/rest/v1/kb_docs?select=id&limit=1")!
-        var req = URLRequest(url:url)
-        req.addValue(AppConfig.anonKey, forHTTPHeaderField: "apikey")
-        req.addValue("Bearer \(AppConfig.anonKey)", forHTTPHeaderField: "Authorization")
-        let (_, r) = try await URLSession.shared.data(for: req)
-        kbOK = (r as? HTTPURLResponse)?.statusCode == 200; log("KB status: \((r as? HTTPURLResponse)?.statusCode ?? -1)")
-      } catch { kbOK = false; log("KB error: \(error.localizedDescription)") }
-    } else { kbOK = false }
+  private func rowBool(_ title: String, _ ok: Bool) -> some View {
+    HStack { Text(title); Spacer(); Image(systemName: ok ? "checkmark.seal.fill" : "xmark.seal.fill").foregroundStyle(ok ? .green : .red) }
+  }
+  private func rowText(_ title: String, _ value: String) -> some View {
+    HStack { Text(title); Spacer(); Text(value).foregroundStyle(value == "ok" ? .green : (value == "missing" ? .orange : .red)).font(.subheadline) }
+  }
+  private func copyRow(_ title: String, _ value: String) -> some View {
+    HStack { Text(title); Spacer(); Text(value).font(.footnote).textSelection(.enabled) }
+      .contentShape(Rectangle())
+      .onTapGesture { UIPasteboard.general.string = value }
   }
 }
 

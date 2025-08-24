@@ -37,6 +37,18 @@ struct AnalysisView: View {
 					}
 				}
 				if !suggestions.isEmpty { suggestionsSection }
+				HStack {
+					Spacer()
+					Button {
+						Task {
+							let ans = await RAGService.answer(for: metrics, suggestions: suggestions)
+							share(text: ans.text)
+						}
+					} label: {
+						Label("Ask Doctor", systemImage: "stethoscope")
+					}
+					.buttonStyle(.borderedProminent)
+				}
                 Toggle("叠加黄金比例面罩", isOn: $showGoldenMask)
 				NavigationLink("心理健康守护 / BDD 自评") { BDDSelfAssessmentView() }
 				NavigationLink("查看隆鼻术式选项") { ProcedureListView(category: "nose") }
@@ -49,6 +61,10 @@ struct AnalysisView: View {
 						Text(String(format: "鼻唇角 %.1f° → 103°", m.nasolabialAngleDegrees)).font(.caption).monospaced()
 						Text(String(format: "下巴投影 %.2f → 1.00", m.chinProjectionRatio)).font(.caption).monospaced()
 						Text(String(format: "宽高比 %.2f → 0.75", m.faceWidthToHeight)).font(.caption).monospaced()
+						Text(String(format: "鼻翼宽 %.1f mm", m.nasalWidthMM)).font(.caption).monospaced()
+						if let v = m.intercanthalDistanceMM { Text(String(format: "内眦距 %.1f mm", v)).font(.caption).monospaced() }
+						if let v = m.browToEyeDistanceMM { Text(String(format: "眉眼距 %.1f mm", v)).font(.caption).monospaced() }
+						if let v = m.palpebralFissureHeightMM { Text(String(format: "睑裂高 %.1f mm", v)).font(.caption).monospaced() }
 						// 可操作的调整量（估算）
 						let chinDeltaPct = max(0, 1.0 - m.chinProjectionRatio)
 						let fiveEyesDeltaPct = max(0, 1.0 - m.fiveEyesRatio)
@@ -218,6 +234,15 @@ private func share(data: Data, fileName: String) {
 		.first?
 		.rootViewController?
 		.present(av, animated: true)
+}
+
+private func share(text: String) {
+    let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+    UIApplication.shared.connectedScenes
+        .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+        .first?
+        .rootViewController?
+        .present(av, animated: true)
 }
 
 private struct LandmarksOverlay: View {

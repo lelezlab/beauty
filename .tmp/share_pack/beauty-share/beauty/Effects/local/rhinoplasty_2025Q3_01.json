@@ -1,0 +1,23 @@
+{
+  "id": "rhinoplasty_2025Q3_01",
+  "version": "1.0.0",
+  "min_app_version": "1.0.0",
+  "category": "nose",
+  "display_name": "鼻背变直 + 鼻尖轻翘（示例）",
+  "controls": [
+    {"key":"bridge_straighten","type":"float","range":[0,1],"default":0.4},
+    {"key":"tip_rotation","type":"deg","range":[-6,12],"default":5}
+  ],
+  "landmark_ops": [
+    {"roi":"nose_bridge","op":"curve_smooth","amount_key":"bridge_straighten"},
+    {"roi":"nose_tip","op":"rotate","amount_key":"tip_rotation"}
+  ],
+  "texture_ops": [
+    {"roi":"nasolabial_fold","op":"shadow_reduce","amount":0.3}
+  ],
+  "assets": [],
+  "model_requirements":["facemesh>=0.9.0"],
+  "legal": {"region_block":[], "disclaimer_id":"sim_only"},
+  "telemetry":{"event":"effect_used"}
+}
+

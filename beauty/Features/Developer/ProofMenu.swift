@@ -3,6 +3,8 @@ import SwiftUI
 struct ProofMenu: View {
     @State private var running = false
     @State private var message: String = ""
+    @AppStorage("autoProof") private var autoProof: Bool = false
+    @AppStorage("autoShare") private var autoShare: Bool = false
 
     var body: some View {
         List {
@@ -14,12 +16,30 @@ struct ProofMenu: View {
                 Button("Run MockTrueDepth") { Task { await run(.mockTrueDepth) } }.disabled(running)
                 Button("Run TriView Placeholder") { Task { await run(.triViewEdgePlaceholder) } }.disabled(running)
                 Button("Run BOTH") { Task { await runBoth() } }.disabled(running)
+                Button("Run GoldenMask Demo") { Task { await runGolden() } }.disabled(running)
+                Button("Run Edge Recon Demo") { Task { let _ = try? await ProofProducer.produceEdgeReconDemo() ; await MainActor.run { message = "Edge Recon Demo done" } } }.disabled(running)
                 Button("分享证明材料") { shareProof() }
+                Button("导出调试日志") { shareDebugLog() }
+                Button("清空调试日志") { DebugLog.clear() }
+                Button("Clear ReconCache") { clearReconCache() }
+                Button("Re-Fetch Models & Re-Run Edge Demo") { Task { _ = await ModelFetcher.fetchAll(); let _ = try? await ProofProducer.produceEdgeReconDemo(); await MainActor.run { message = "Models fetched & Edge demo regenerated" } } }
                 if !running && !message.isEmpty { Text("ProofDone").accessibilityIdentifier("ProofDone").hidden() }
+            }
+            Section("自动化") {
+                Toggle("自动运行", isOn: $autoProof)
+                Toggle("自动分享", isOn: $autoShare)
+                Button("重新获取模型") { Task { _ = await ModelFetcher.fetchAll() } }
             }
             if !message.isEmpty { Text(message).font(.footnote).foregroundStyle(.secondary) }
         }
         .navigationTitle("Proof Pack")
+        .onAppear {
+            // 种子化本地样片，避免手动拷贝
+            ProofSamplesSeeder.seedIfNeeded()
+            if autoProof && !running {
+                Task { await ProofProducer.runBoth(autoShare: autoShare) }
+            }
+        }
     }
 
     private func run(_ mode: ProofMode) async {
@@ -37,7 +57,21 @@ struct ProofMenu: View {
     }
 
     private func runBoth() async {
-        do { try await run(.mockTrueDepth); try await run(.triViewEdgePlaceholder); await MainActor.run { shareProof() } } catch {}
+        running = true
+        defer { running = false }
+        await ProofProducer.runBoth(autoShare: autoShare)
+        await MainActor.run { message = "Proof Pack completed." }
+    }
+
+    private func runGolden() async {
+        running = true
+        defer { running = false }
+        do {
+            let url = try await ProofProducer.runGoldenMaskDemo()
+            await MainActor.run { message = "GoldenMask: \(url.path)" }
+        } catch {
+            await MainActor.run { message = "GoldenMask Error: \(error.localizedDescription)" }
+        }
     }
 
     private func shareProof() {
@@ -46,10 +80,36 @@ struct ProofMenu: View {
             docs.appendingPathComponent("mockTrueDepth/demo.mp4"),
             docs.appendingPathComponent("mockTrueDepth/diagnostics.png"),
             docs.appendingPathComponent("triView/demo.mp4"),
-            docs.appendingPathComponent("triView/diagnostics.png")
+            docs.appendingPathComponent("triView/diagnostics.png"),
+            docs.appendingPathComponent("doctor/doctor_mode_demo.mp4")
         ]
-        let av = UIActivityViewController(activityItems: urls, applicationActivities: nil)
+        let existing = urls.filter { FileManager.default.fileExists(atPath: $0.path) }
+        let av = UIActivityViewController(activityItems: existing, applicationActivities: nil)
         UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.rootViewController?.present(av, animated: true)
+    }
+
+    private func shareDebugLog() {
+        let url = DebugLog.exportURL()
+        // Ensure file exists so分享不会失败
+        if !FileManager.default.fileExists(atPath: url.path) {
+            let data = "(empty)\n".data(using: .utf8)
+            try? data?.write(to: url)
+        }
+        DebugLog.log("shareDebugLog tapped")
+        let av = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            root.present(av, animated: true)
+        } else {
+            UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.rootViewController?.present(av, animated: true)
+        }
+    }
+
+    private func clearReconCache() {
+        DispatchQueue.global(qos: .utility).async {
+            ReconCache.clearSync()
+            DispatchQueue.main.async { message = "ReconCache cleared" }
+        }
     }
 }
 

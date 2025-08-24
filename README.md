@@ -1,19 +1,70 @@
 ## beauty 应用页面与交互规划（iOS）
 
-### Proof Pack 一键生成/下载
+### Proof Pack 一键生成/下载（零交互版）
 
 本地（模拟器或真机均可）：
 
-1. 运行 App → 设置 → 开发者 → Generate Proof Pack
-2. 选择 Run MockTrueDepth / Run TriView Placeholder / Run BOTH
-3. 完成后在 Documents/proof/ 目录下获得：
+1. 运行 App → 设置 → Proof Pack（默认自动执行 Run BOTH）
+2. 完成后自动弹系统分享；在 Documents/proof/ 目录下获得（并额外打包 proof.zip）：
    - mockTrueDepth/demo.mp4、mockTrueDepth/diagnostics.png
    - triView/demo.mp4、triView/diagnostics.png
+   - edge_recon/demo.mp4、edge_recon/diagnostics.png、edge_recon/last_job.json
+   - proof.zip（上述文件的打包）
 
 CI（GitHub Actions）：
 
-1. 在 PR 面板的 Artifacts 下载 `proof-pack`
-2. 内容同上，适用于自动验收
+1. 在 PR 面板的 Artifacts 下载 `proof-pack`（proof-pack.zip）
+2. Workflow 动态选择最新可用 iPhone 模拟器，稳定产出 proof
+
+### 零交互验收（3 行）
+```
+cp .env.example .env
+# 修改 .env：SUPABASE_PROJECT_REF / MODEL_MIRROR_BASE / EDGE_BASE_URL
+make all
+```
+
+### AI 能力栈（新增模块）
+
+- iOS 端（可离线编译，在线可选）
+  - `Core/AIProviders/FaceMeshProvider.swift`：FaceMesh 468 点占位（Vision 近似，上采样到 468）。
+  - `Core/AIProviders/ORTMobile.swift`：ONNX Runtime Mobile 封装（未集成优雅降级）。
+  - `Core/AIProviders/ArcFaceEmbedder.swift`：ArcFace 本地 ORT/远端/Stub 三段式。
+  - `Core/AIProviders/FaceParsingClient.swift`：分割远端占位；`DepthClient.swift`：MiDaS 深度占位。
+  - `Core/Texture/SeamlessBlender.swift`：OpenCV seamlessClone 的 CoreImage 兜底实现。
+  - `Features/CelebMatch/CelebMatchView.swift`：相似度 Top-K UI。
+- 重建回退链路
+  - `ReconstructionOrchestrator`：ARKit → Edge → 3DDFA_V2（新）。
+  - `Core/Reconstruction/ThreeDDFAReconstruction.swift`：对接 `ThreeDDFAURL`。
+
+### 黄金比例面罩与毫米热力（How to）
+
+- 2D/3D 黄金面罩资源位于 `specs/golden_mask/`（OBJ/anchors）。
+- 在 3D 预览页（`Face3DPreviewView`）中：
+  - 叠加 `GoldenMask3DOverlay(mesh:t1:t2:alpha:)`，可实时调节：
+    - 绿≤t1（mm）、黄≤t2（mm）、透明度 alpha、术前/术后对比滑杆。
+  - `GoldenMaskAlignment3D` 对黄金面罩与用户网格做相似变换并输出每顶点偏差→颜色（±1mm 绿，±3mm 黄，>±3mm 红）。
+
+### 全面面部测试分析（规划）
+
+- 扩充 `AestheticsMetrics` 覆盖眼鼻唇颌：角度/长度/宽高比/曲率等；输出风格词与“差异热点”。
+- 解剖联动：`AnatomyView` 高亮组织，术式滑杆与软/硬边界绑定。
+- 术后 3D 模拟：TPS + Multi‑view consistency；Before/After 对比与 3D 截屏。
+
+
+### 服务端骨架（stubs）
+
+- `server/services/3ddfa_v2/app.py`：/ai/3ddfa/recon 返回占位网格
+- `server/services/face_parsing/app.py`：/ai/face-parsing 返回占位 mask
+- `server/services/midas_depth/app.py`：/ai/midas/depth 返回占位 depth
+- `server/services/arcface_embed/app.py`：/ai/arcface/embed 返回占位 embedding
+- `server/utils/open3d_tools.py`：法线/平滑占位；无 open3d 时降级
+- `supabase/sql/celeb_gallery.sql`：明星图库 + pgvector 索引
+
+### 端点配置（Info.plist）
+
+在应用的 Info.plist 中可选设置以下键以启用远端：
+- `ThreeDDFAURL`、`ArcFaceEmbedURL`、`FaceParsingURL`、`MiDaSDepthURL`
+未配置时自动降级到本地/占位逻辑。
 
 本文件用于追踪页面结构、交互设计与实现进度，覆盖从引导拍摄到美学分析、预设预览与手动编辑的核心流程。
 
