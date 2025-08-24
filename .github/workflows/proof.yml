@@ -26,9 +26,17 @@ jobs:
           echo "\n\nPip onnx/coreml/mediapipe:" >> $GITHUB_STEP_SUMMARY
           pip3 list | grep -E 'onnx|coreml|mediapipe' | sed 's/^/> /' || true
       - name: Select Xcode 16
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16'
+        run: |
+          set -euo pipefail
+          CAND=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | head -n 1 || true)
+          if [ -n "$CAND" ]; then
+            echo "Selecting $CAND"
+            sudo xcode-select -s "$CAND/Contents/Developer"
+          else
+            echo "Available Xcodes:"; ls -1 /Applications | sed 's/^/> /' || true
+            echo "setup-xcode fallback"
+            echo "::group::xcodebuild -version (before)"; xcodebuild -version || true; echo "::endgroup::"
+          fi
       - name: Prepare scripts
         run: |
           set -euo pipefail
