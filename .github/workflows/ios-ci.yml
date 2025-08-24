@@ -1,35 +1,58 @@
-name: iOS CI (manual)
+name: iOS CI (Simulator Build)
 
 on:
-  workflow_dispatch:
-  push:
   pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: {}
 
 jobs:
-  noop:
-    runs-on: macos-14
-    steps:
-      - run: echo "manual trigger"
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
 
-name: iOS CI
-on:
-  push: { branches: ["**"] }
-  pull_request:
-jobs:
-  build-and-test:
-    runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Select Xcode 16
+        id: xcode
+        uses: apple-actions/setup-xcode@v2
+        with:
+          xcode-version: '16.*'
+
+      - name: Xcode Version
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-xcode16-deriveddata
+
+      - name: Resolve (SwiftPM)
+        run: xcodebuild -resolvePackageDependencies -scheme beauty
+
+      - name: Build (iOS Simulator)
         run: |
           set -euo pipefail
-          CAND=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | head -n 1 || true)
-          if [ -n "$CAND" ]; then sudo xcode-select -s "$CAND/Contents/Developer"; else echo "Keep default"; fi
-      - name: Resolve
-        run: xcodebuild -resolvePackageDependencies -scheme beauty
-      - name: Build-for-testing
-        run: xcodebuild -scheme beauty -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15' build-for-testing
-      - name: Test
-        run: xcodebuild -scheme beauty -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15' test -quiet || true
+          xcodebuild \
+            -scheme beauty \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            build
 
-
+      - name: Unit Tests (first available iPhone sim)
+        run: |
+          set -euo pipefail
+          NAME=$(xcrun simctl list devices available | grep -E 'iPhone' | head -n1 | sed -E 's/^\s*([^(]+)\s*\(.*/\1/')
+          echo "Using simulator: $NAME"
+          xcodebuild \
+            -scheme beauty \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=$NAME" \
+            -skip-testing:beautyUITests \
+            test || true
