@@ -20,6 +20,35 @@ enum VisionLandmarksHelper {
         return points
     }
 
+    struct Named {
+        let leftEye: [CGPoint]?
+        let rightEye: [CGPoint]?
+        let leftBrow: [CGPoint]?
+        let rightBrow: [CGPoint]?
+        let nose: [CGPoint]?
+        let noseCrest: [CGPoint]?
+        let outerLips: [CGPoint]?
+        let faceContour: [CGPoint]?
+        let medianLine: [CGPoint]?
+    }
+
+    static func detectNamed(from image: UIImage) -> Named? {
+        guard let cg = image.cgImage else { return nil }
+        let req = VNDetectFaceLandmarksRequest()
+        let handler = VNImageRequestHandler(cgImage: cg, orientation: cgOrientation(of: image), options: [:])
+        do { try handler.perform([req]) } catch { return nil }
+        guard let obs = req.results?.first as? VNFaceObservation, let lm = obs.landmarks else { return nil }
+        func conv(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint]? {
+            guard let r = region else { return nil }
+            return r.normalizedPoints.map { p in
+                let x = obs.boundingBox.origin.x + p.x * obs.boundingBox.size.width
+                let y = obs.boundingBox.origin.y + p.y * obs.boundingBox.size.height
+                return CGPoint(x: x, y: y)
+            }
+        }
+        return Named(leftEye: conv(lm.leftEye), rightEye: conv(lm.rightEye), leftBrow: conv(lm.leftEyebrow), rightBrow: conv(lm.rightEyebrow), nose: conv(lm.nose), noseCrest: conv(lm.noseCrest), outerLips: conv(lm.outerLips), faceContour: conv(lm.faceContour), medianLine: conv(lm.medianLine))
+    }
+
     static func cgOrientation(of image: UIImage) -> CGImagePropertyOrientation {
         switch image.imageOrientation {
         case .up: return .up
