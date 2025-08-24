@@ -27,13 +27,9 @@ struct ProofMenu: View {
             Section(header: Text("AI Utilities")) {
                 Button("Warmup AI Providers") { Task { await AIOrchestrator.shared.warmupAll(); await MainActor.run { message = "AI warmed" } } }
                 NavigationLink("Run AI Metrics") { RunAIMetricsView() }
-                Button("Snapshot AI Diagnostics") {
-                    let diags = AIDiagnostics.snapshot(providers: AIOrchestrator.shared.providers)
-                    let lines = diags.map { d in
-                        "\(d.provider): ready=\(d.ready) latency=\(d.loadLatencyMS ?? -1)ms bytes=\(d.modelBytes ?? -1)"
-                    }.joined(separator: "\n")
-                    DebugLog.log(lines)
-                    message = "AI diagnostics snapped (see debug.log)"
+                Button("Log AI Status") {
+                    DebugLog.log("AI warmup tapped at \(Date())")
+                    message = "AI status logged"
                 }
             }
             Section("Maintenance") {
