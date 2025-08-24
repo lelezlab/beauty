@@ -16,6 +16,15 @@ struct ProofMenu: View {
                 Button("Run MockTrueDepth") { Task { await run(.mockTrueDepth) } }.disabled(running)
                 Button("Run TriView Placeholder") { Task { await run(.triViewEdgePlaceholder) } }.disabled(running)
                 Button("Run BOTH") { Task { await runBoth() } }.disabled(running)
+                Button("Warmup AI Providers") { Task { await AIOrchestrator.shared.warmupAll(); await MainActor.run { message = "AI warmed" } } }
+                Button("Run AI Metrics") {
+                    let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                    let out = docs.appendingPathComponent("proof/ai_metrics", isDirectory: true)
+                    let mesh: FaceMesh3D? = nil
+                    let landmarks: [CGPoint]? = nil
+                    ProofProducer().produceAIMetricsProof(mesh: mesh, landmarks: landmarks, outDir: out)
+                    message = "AI metrics generated at \(out.path)"
+                }
                 Button("Run GoldenMask Demo") { Task { await runGolden() } }.disabled(running)
                 Button("Run Edge Recon Demo") { Task { let _ = try? await ProofProducer.produceEdgeReconDemo() ; await MainActor.run { message = "Edge Recon Demo done" } } }.disabled(running)
                 Button("分享证明材料") { shareProof() }

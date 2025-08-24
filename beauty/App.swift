@@ -25,6 +25,7 @@ struct BeautyApp: App {
         print("Manifest verify failed:", error.localizedDescription)
       }
     }
+    Task { await AIOrchestrator.shared.warmupAll() }
   }
   var body: some Scene {
     WindowGroup {

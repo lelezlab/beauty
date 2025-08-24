@@ -9,7 +9,7 @@ final class BiSeNetParsingProvider: FaceParsingProvider {
 
     func warmup() throws {
         let t0 = Date()
-        let path = try ModelRegistry.path(for: "face_parsing_bisenet")
+        let path = try ModelRegistry.path(for: ModelIDs.bisenetONNX)
         let attr = try FileManager.default.attributesOfItem(atPath: path)
         self.modelBytes = (attr[.size] as? NSNumber)?.int64Value
         self.isReady = true
@@ -17,8 +17,10 @@ final class BiSeNetParsingProvider: FaceParsingProvider {
     }
 
     func parse(in pixelBuffer: CVPixelBuffer) throws -> (labels: [UInt8], width: Int, height: Int) {
-        precondition(isReady)
-        return ([], 0, 0)
+        guard isReady else { throw AIErrors.notReady("bisenet") }
+        let w = CVPixelBufferGetWidth(pixelBuffer)
+        let h = CVPixelBufferGetHeight(pixelBuffer)
+        return (Array(repeating: 0, count: w*h), w, h)
     }
 }
 

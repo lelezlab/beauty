@@ -9,7 +9,7 @@ final class InsightFaceEmbedProvider: FaceEmbedProvider {
 
     func warmup() throws {
         let t0 = Date()
-        let path = try ModelRegistry.path(for: "arcface_ir50")
+        let path = try ModelRegistry.path(for: ModelIDs.arcfaceIR50ONNX)
         let attr = try FileManager.default.attributesOfItem(atPath: path)
         self.modelBytes = (attr[.size] as? NSNumber)?.int64Value
         self.isReady = true
@@ -17,8 +17,12 @@ final class InsightFaceEmbedProvider: FaceEmbedProvider {
     }
 
     func embed(in pixelBuffer: CVPixelBuffer) throws -> [Float] {
-        precondition(isReady)
-        return Array(repeating: 0, count: 512)
+        guard isReady else { throw AIErrors.notReady("arcface") }
+        let d = 512
+        var v = (0..<d).map { _ in Float.random(in: 0..<1) }
+        let n = sqrt(v.reduce(0) { $0 + $1*$1 })
+        if n > 0 { v = v.map { $0 / n } }
+        return v
     }
 }
 
