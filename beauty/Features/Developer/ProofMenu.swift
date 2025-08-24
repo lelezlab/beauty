@@ -22,7 +22,7 @@ struct ProofMenu: View {
                 Button("分享证明材料") { shareProof() }
                 if !running && !message.isEmpty { Text("ProofDone").accessibilityIdentifier("ProofDone").hidden() }
             }
-            Section("AI Utilities") {
+            Section {
                 Button("Warmup AI Providers") { Task { await AIOrchestrator.shared.warmupAll(); await MainActor.run { message = "AI warmed" } } }
                 Button("Run AI Metrics") {
                     let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -32,7 +32,7 @@ struct ProofMenu: View {
                     ProofProducer().produceAIMetricsProof(mesh: mesh, landmarks: landmarks, outDir: out)
                     message = "AI metrics generated at \(out.path)"
                 }
-            }
+            } header: { Text("AI Utilities") }
             Section("Maintenance") {
                 Button("导出调试日志") { shareDebugLog() }
                 Button("清空调试日志") { DebugLog.clear() }
