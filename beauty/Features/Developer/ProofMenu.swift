@@ -24,23 +24,7 @@ struct ProofMenu: View {
             }
             Section(header: Text("AI Utilities")) {
                 Button("Warmup AI Providers") { Task { await AIOrchestrator.shared.warmupAll(); await MainActor.run { message = "AI warmed" } } }
-                Button("Run AI Metrics") {
-                    AppFlags.isProofRunning = true
-                    ReconstructionOrchestrator.shared.cancelAll()
-                    defer {
-                        AppFlags.isProofRunning = false
-                        CaptureStore.shared.lastMesh = nil
-                    }
-                    let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                    let out = docs.appendingPathComponent("proof/ai_metrics", isDirectory: true)
-                    let mesh: FaceMesh3D? = nil
-                    let landmarks: [CGPoint]? = nil
-                    // Run metrics in a background autoreleasepool and on a blank context
-                    autoreleasepool {
-                        ProofProducer().produceAIMetricsProof(mesh: mesh, landmarks: landmarks, outDir: out)
-                    }
-                    message = "AI metrics generated at \(out.path)"
-                }
+                NavigationLink("Run AI Metrics") { RunAIMetricsView() }
             }
             Section("Maintenance") {
                 Button("导出调试日志") { shareDebugLog() }
