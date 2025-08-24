@@ -8,7 +8,7 @@ final class MediaPipeFaceLandmarksProvider: FaceLandmarksProvider {
     private(set) var modelBytes: Int64?
     private(set) var loadLatencyMS: Int?
 
-    private var runtime: Any?
+    private var runtime: InferenceBackend?
     private var initialized = false
 
     func warmup() throws {
@@ -16,7 +16,9 @@ final class MediaPipeFaceLandmarksProvider: FaceLandmarksProvider {
         let path = try ModelRegistry.path(for: ModelIDs.mediapipeTask)
         let attr = try FileManager.default.attributesOfItem(atPath: path)
         self.modelBytes = (attr[.size] as? NSNumber)?.int64Value
-        self.runtime = "placeholder"
+        let be = InferenceBackend(type: .none)
+        try? be.load(modelPath: path)
+        self.runtime = be
         self.initialized = true
         self.loadLatencyMS = Int(Date().timeIntervalSince(t0) * 1000)
         self.isReady = true

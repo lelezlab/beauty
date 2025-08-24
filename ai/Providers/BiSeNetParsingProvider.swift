@@ -12,6 +12,8 @@ final class BiSeNetParsingProvider: FaceParsingProvider {
         let path = try ModelRegistry.path(for: ModelIDs.bisenetONNX)
         let attr = try FileManager.default.attributesOfItem(atPath: path)
         self.modelBytes = (attr[.size] as? NSNumber)?.int64Value
+        let be = InferenceBackend(type: .none)
+        try? be.load(modelPath: path)
         self.isReady = true
         self.loadLatencyMS = Int(Date().timeIntervalSince(t0) * 1000)
     }
