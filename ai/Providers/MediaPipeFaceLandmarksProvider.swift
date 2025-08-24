@@ -26,7 +26,7 @@ final class MediaPipeFaceLandmarksProvider: FaceLandmarksProvider {
 
     func detect(in pixelBuffer: CVPixelBuffer) throws -> [CGPoint] {
         guard isReady, initialized else { throw AIErrors.notReady("mediapipe") }
-        // For M1, fall back to Vision request using one frame snapshot
+        let t0 = Date()
         var points: [CGPoint] = []
         autoreleasepool {
             let ci = CIImage(cvPixelBuffer: pixelBuffer)
@@ -35,6 +35,7 @@ final class MediaPipeFaceLandmarksProvider: FaceLandmarksProvider {
                 points = VisionLandmarksHelper.detectNormalizedPoints(from: ui)
             }
         }
+        LatencyTracker.addSample(Date().timeIntervalSince(t0)*1000.0, key: "landmarks_ms")
         return points
     }
 }

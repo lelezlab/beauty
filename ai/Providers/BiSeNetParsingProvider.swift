@@ -20,6 +20,7 @@ final class BiSeNetParsingProvider: FaceParsingProvider {
 
     func parse(in pixelBuffer: CVPixelBuffer) throws -> (labels: [UInt8], width: Int, height: Int) {
         guard isReady else { throw AIErrors.notReady("bisenet") }
+        let t0 = Date()
         // M1 MVP: produce a simple skin/non-skin mask using Vision face bounds as proxy
         let w = CVPixelBufferGetWidth(pixelBuffer)
         let h = CVPixelBufferGetHeight(pixelBuffer)
@@ -46,6 +47,7 @@ final class BiSeNetParsingProvider: FaceParsingProvider {
                 }
             }
         }
+        LatencyTracker.addSample(Date().timeIntervalSince(t0)*1000.0, key: "parsing_ms")
         return (labels, w, h)
     }
 }
