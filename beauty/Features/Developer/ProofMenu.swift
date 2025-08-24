@@ -25,6 +25,8 @@ struct ProofMenu: View {
             Section(header: Text("AI Utilities")) {
                 Button("Warmup AI Providers") { Task { await AIOrchestrator.shared.warmupAll(); await MainActor.run { message = "AI warmed" } } }
                 Button("Run AI Metrics") {
+                    AppFlags.isProofRunning = true
+                    defer { AppFlags.isProofRunning = false; CaptureStore.shared.lastMesh = nil }
                     let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
                     let out = docs.appendingPathComponent("proof/ai_metrics", isDirectory: true)
                     let mesh: FaceMesh3D? = nil

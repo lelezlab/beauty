@@ -84,6 +84,7 @@ struct Face3DPreviewView: View {
     }
 
     private func reconstructIfPossible() async {
+        guard !AppFlags.isProofRunning else { return }
         isComputing = true
         defer { isComputing = false }
         let _ = await ReconstructionOrchestrator.shared.reconstructAuto()
@@ -98,9 +99,10 @@ struct Face3DPreviewView: View {
     }
 
     private func reconstructEdge() async {
+        guard !AppFlags.isProofRunning else { return }
         isComputing = true
         defer { isComputing = false }
-        var b = ReconstructionOrchestrator.shared.buildBundleFromCapture()
+        let b = ReconstructionOrchestrator.shared.buildBundleFromCapture()
         // If no tri-view present, use samples
         if b.front == nil || b.left == nil || b.right == nil {
             if let m = try? await TriViewSampleProvider.reconstructMesh() { CaptureStore.shared.lastMesh = m }

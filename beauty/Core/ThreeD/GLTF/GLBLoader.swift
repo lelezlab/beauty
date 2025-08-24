@@ -7,8 +7,19 @@ enum GLBLoader {
         #if canImport(GLTFSceneKit)
         if let scene = try? GLTFSceneSource(url: url).scene() { return scene.rootNode }
         #endif
-        // Fallback to SceneKit native
-        let scene = try SCNScene(url: url, options: nil)
+        // Fallback to SceneKit native with URL-based load and autorelease to reduce peak memory
+        let scene: SCNScene = try autoreleasepool(invoking: {
+            let src = SCNSceneSource(url: url, options: [
+                SCNSceneSource.LoadingOption.checkConsistency: false,
+                SCNSceneSource.LoadingOption.convertUnitsToMeters: true
+            ])
+            guard let s = try src?.scene(options: [
+                SCNSceneSource.LoadingOption.createNormalsIfAbsent: true
+            ]) else {
+                throw NSError(domain: "glb.parse", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load GLB"])
+            }
+            return s
+        })
         return scene.rootNode
     }
 
