@@ -49,6 +49,7 @@ final class ReconstructionOrchestrator {
     }
 
     func reconstruct(backend: ReconstructionBackend = .arkit) async -> FaceMesh3D? {
+        if AppFlags.isProofRunning { return nil }
         let bundle = buildBundleFromCapture()
         let prov = provider(for: backend)
         do {
@@ -69,6 +70,7 @@ final class ReconstructionOrchestrator {
 
     // Auto: tri-view preferred when forced or when ARKit unsupported
     func reconstructAuto() async -> FaceMesh3D? {
+        if AppFlags.isProofRunning { return nil }
         let bundle = buildBundleFromCapture()
         let arkitAvailable: Bool = {
             #if canImport(ARKit)
