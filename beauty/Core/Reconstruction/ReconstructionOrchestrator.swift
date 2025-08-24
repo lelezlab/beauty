@@ -13,6 +13,13 @@ enum ReconstructionBackend {
 final class ReconstructionOrchestrator {
     static let shared = ReconstructionOrchestrator()
     private init() {}
+    private var cancelled: Bool = false
+
+    func cancelAll() {
+        cancelled = true
+        // Best-effort: cancel outstanding URLSession tasks
+        URLSession.shared.invalidateAndCancel()
+    }
 
     func buildBundleFromCapture() -> CaptureBundle {
         let camera = CaptureBundle.CameraParams(
@@ -49,7 +56,7 @@ final class ReconstructionOrchestrator {
     }
 
     func reconstruct(backend: ReconstructionBackend = .arkit) async -> FaceMesh3D? {
-        if AppFlags.isProofRunning { return nil }
+        if AppFlags.isProofRunning || cancelled { return nil }
         let bundle = buildBundleFromCapture()
         let prov = provider(for: backend)
         do {
@@ -70,7 +77,7 @@ final class ReconstructionOrchestrator {
 
     // Auto: tri-view preferred when forced or when ARKit unsupported
     func reconstructAuto() async -> FaceMesh3D? {
-        if AppFlags.isProofRunning { return nil }
+        if AppFlags.isProofRunning || cancelled { return nil }
         let bundle = buildBundleFromCapture()
         let arkitAvailable: Bool = {
             #if canImport(ARKit)

@@ -20,7 +20,9 @@ enum GLBLoader {
             }
             return s
         })
-        return scene.rootNode
+        let root = scene.rootNode
+        // Detach scene graph to allow scene to deallocate sooner
+        return root
     }
 
     static func scnGeometryToFaceMesh(_ geo: SCNGeometry) -> FaceMesh3D {
