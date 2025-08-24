@@ -19,7 +19,7 @@ public struct MeasurementResult: Codable {
 }
 
 public enum FacialAnthroKit {
-    public static func measureFrom(mesh: FaceMesh3D?, landmarks: [CGPoint]?) -> MeasurementResult {
+    static func measureFrom(mesh: FaceMesh3D?, landmarks: [CGPoint]?) -> MeasurementResult {
         // Minimal placeholder values to keep pipeline functional in App target
         var m = FacialMeasures()
         m.nasolabialAngleDeg = 95
