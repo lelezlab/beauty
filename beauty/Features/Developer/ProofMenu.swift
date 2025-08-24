@@ -19,6 +19,7 @@ struct ProofMenu: View {
                 Button("Run BOTH") { Task { await runBoth() } }.disabled(running)
                 Button("Run GoldenMask Demo") { Task { await runGolden() } }.disabled(running)
                 Button("Run Edge Recon Demo") { Task { let _ = try? await ProofProducer.produceEdgeReconDemo() ; await MainActor.run { message = "Edge Recon Demo done" } } }.disabled(running)
+                Button("Run Mirror Demo (export)") { if let url = ProofProducer.produceMirrorDemo() { message = "Mirror exported: \(url.path)" } }
                 Button("分享证明材料") { shareProof() }
                 if !running && !message.isEmpty { Text("ProofDone").accessibilityIdentifier("ProofDone").hidden() }
             }

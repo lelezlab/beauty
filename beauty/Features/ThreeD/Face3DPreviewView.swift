@@ -14,6 +14,8 @@ struct Face3DPreviewView: View {
     @State private var beforeAfter: Double = 0.0 // 0 = before, 1 = after
     @State private var paramTip: Double = 0.0
     @State private var paramBridge: Double = 0.0
+    @State private var paramChin: Double = 0.0
+    @State private var paramJaw: Double = 0.0
 
     var body: some View {
         ScrollView {
@@ -64,9 +66,15 @@ struct Face3DPreviewView: View {
                 HStack { Text("术前↔术后"); Slider(value: $beforeAfter, in: 0...1) }
                 HStack { Text("tip_rotation"); Slider(value: $paramTip, in: -8...8); Text(String(format: "%.1f°", paramTip)) }
                 HStack { Text("bridge_straighten"); Slider(value: $paramBridge, in: 0...1); Text(String(format: "%.2f", paramBridge)) }
+                HStack { Text("chin_forward"); Slider(value: $paramChin, in: -3...5); Text(String(format: "%.1fmm", paramChin)) }
+                HStack { Text("jaw_sharpness"); Slider(value: $paramJaw, in: 0...1); Text(String(format: "%.2f", paramJaw)) }
             }
             .font(.caption)
             .padding(.horizontal, 4)
+            HStack {
+                Button("导出前后对比") { _ = ProofProducer.produceMirrorDemo() }.buttonStyle(.bordered)
+                Spacer()
+            }
             Text("说明：当前为占位 3D 预览。真机将优先使用 ARKit 网格；无 TrueDepth 时将回退到三视图重建（未启用则显示空态）。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -115,8 +123,12 @@ struct Face3DPreviewView: View {
     private func makeScene(from mesh: FaceMesh3D) -> SCNScene {
         let scene = SCNScene()
         let node = SCNNode()
-        // Before/After blend (use TPSMorph)
-        let after = TPSMorph.apply(to: mesh, params: .init(tip_rotation: paramTip, bridge_straighten: paramBridge))
+        // Before/After blend with Mirror params
+        let after = TPSMorph.apply(to: mesh, params: .init(tip_rotation: paramTip,
+                                                          bridge_straighten: paramBridge,
+                                                          alar_narrowing: 0,
+                                                          chin_forward: paramChin,
+                                                          gonial_angle_soften: paramJaw))
         let blended = FaceMesh3D.blend(mesh, after, t: Float(beforeAfter))
         let vertsMeters: [SIMD3<Float>] = blended.vertices.map { Units.mmToMeters($0) }
         let verts = vertsMeters.map { SCNVector3($0.x, $0.y, $0.z) }
