@@ -40,7 +40,11 @@ jobs:
           for d in "${CANDIDATES[@]}"; do
             if xcrun simctl list devicetypes | grep -q "$d"; then DEVICE_NAME="$d"; break; fi
           done
-          if [ -z "$DEVICE_NAME" ]; then echo "No desired simulator found"; exit 1; fi
+          if [ -z "$DEVICE_NAME" ]; then
+            # Fallback: pick the first available iPhone device type
+            DEVICE_NAME=$(xcrun simctl list devicetypes | awk -F '[()]' '/iPhone/ {print $2; exit}')
+          fi
+          if [ -z "$DEVICE_NAME" ]; then echo "No iPhone simulator found"; exit 1; fi
           echo "DEVICE_NAME=$DEVICE_NAME" >> $GITHUB_ENV
           EOS
           chmod +x scripts/choose-simulator.sh
