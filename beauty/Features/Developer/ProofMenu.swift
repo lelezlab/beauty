@@ -21,6 +21,7 @@ struct ProofMenu: View {
                 Button("Run Edge Recon Demo") { Task { let _ = try? await ProofProducer.produceEdgeReconDemo() ; await MainActor.run { message = "Edge Recon Demo done" } } }.disabled(running)
                 Button("Run Mirror Demo (export)") { if let url = ProofProducer.produceMirrorDemo() { message = "Mirror exported: \(url.path)" } }
                 Button("Run CaseSearch Shots") { if let url = ProofProducer.produceCaseSearchShots() { message = "Cases exported: \(url.path)" } }
+                Button("Run All Extras (metrics+mirror+cases)") { ProofProducer.produceAllProofExtras(); message = "Extras generated (see Documents/proof)" }
                 Button("分享证明材料") { shareProof() }
                 if !running && !message.isEmpty { Text("ProofDone").accessibilityIdentifier("ProofDone").hidden() }
             }
