@@ -1,0 +1,196 @@
+name: Proof Pack CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  build-and-proof:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Env info
+        run: |
+          set -euo pipefail
+          echo "### Runner Versions" >> $GITHUB_STEP_SUMMARY
+          echo "\n\n\`xcodebuild -version\`" >> $GITHUB_STEP_SUMMARY
+          xcodebuild -version | sed 's/^/> /'
+          echo "\n\nXcode path:" >> $GITHUB_STEP_SUMMARY
+          xcode-select -p | sed 's/^/> /'
+          echo "\n\nSwift:" >> $GITHUB_STEP_SUMMARY
+          swift --version | sed 's/^/> /'
+          echo "\n\nPython:" >> $GITHUB_STEP_SUMMARY
+          python3 --version | sed 's/^/> /'
+          echo "\n\nPip onnx/coreml/mediapipe:" >> $GITHUB_STEP_SUMMARY
+          pip3 list | grep -E 'onnx|coreml|mediapipe' | sed 's/^/> /' || true
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+      - name: Prepare scripts
+        run: |
+          set -euo pipefail
+          mkdir -p scripts
+          cat > scripts/choose-simulator.sh <<'EOS'
+          set -euo pipefail
+          CANDIDATES=("iPhone 16 Pro" "iPhone 16" "iPhone 15 Pro" "iPhone 15" "iPhone 14 Pro" "iPhone 14")
+          DEVICE_NAME=""
+          for d in "${CANDIDATES[@]}"; do
+            if xcrun simctl list devicetypes | grep -q "$d"; then DEVICE_NAME="$d"; break; fi
+          done
+          if [ -z "$DEVICE_NAME" ]; then echo "No desired simulator found"; exit 1; fi
+          echo "DEVICE_NAME=$DEVICE_NAME" >> $GITHUB_ENV
+          EOS
+          chmod +x scripts/choose-simulator.sh
+      - name: Pick latest iPhone simulator
+        run: bash ./scripts/choose-simulator.sh
+      - name: Resolve Packages
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies -scheme beauty
+      - name: Sync models (spec→lock)
+        run: |
+          set -euo pipefail
+          python3 -m pip install -U requests onnx onnxsim coremltools mediapipe
+          python3 scripts/models_sync.py --mirror-base "${{ secrets.MODEL_MIRROR_BASE }}"
+      - name: Validate models lock
+        run: |
+          set -euo pipefail
+          test -f Resources/Models/models.lock.json
+      - name: Build for testing
+        run: |
+          set -euo pipefail
+          xcodebuild -scheme beauty -sdk iphonesimulator -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" build-for-testing
+      - name: Validate models via UnitTest
+        run: |
+          set -euo pipefail
+          xcodebuild -scheme beauty -sdk iphonesimulator -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" -enableCodeCoverage YES test -only-testing:ModelLockTests
+      - name: Run ProofPack tests (auto run BOTH in app)
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -scheme beauty \
+            -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" \
+            -derivedDataPath DerivedData \
+            test -only-testing:ProofPackUITests
+      - name: Edge mock smoke
+        run: |
+          set -e
+          BASE="https://${{ secrets.SUPABASE_PROJECT_REF }}.functions.supabase.co/reconstruct-"
+          REQ=$(curl -s -X POST "${BASE}request-urls" -H 'Content-Type: application/json' -d '{"mode":"mock","device_id":"ci"}')
+          echo "$REQ" | python3 -c "import sys,json; print(json.load(sys.stdin)['job_id'])" > job_id.txt
+          ID=$(cat job_id.txt)
+          curl -s -X POST "${BASE}submit" -H 'Content-Type: application/json' -d "{\"job_id\":\"$ID\",\"meta\":{\"device_id\":\"ci\",\"mode\":\"mock\"}}" > /dev/null
+          curl -s -X POST "${BASE}run" > /dev/null
+          sleep 1
+          ST=$(curl -s "${BASE}status?id=$ID")
+          echo "$ST" > edge_mock_result.json
+          python3 -c "import json; d=json.load(open('edge_mock_result.json')); assert d.get('status')=='done', d"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: edge-mock-smoke
+          path: edge_mock_result.json
+      - name: Archive proof artifacts
+        run: |
+          set -euo pipefail
+          PROOF_DIR=$(find DerivedData -type d -path "*/Containers/Data/Documents/proof" | head -n 1)
+          if [ -n "$PROOF_DIR" ]; then
+            (cd "$PROOF_DIR/.." && zip -r proof-pack.zip proof)
+            mv "$PROOF_DIR/../proof-pack.zip" ./proof-pack.zip
+          else
+            echo "No proof directory found; creating empty zip"
+            zip -r proof-pack.zip . -x "*"
+          fi
+      - name: Prepare share pack input
+        run: |
+          set -e
+          PROOF_DIR=$(find DerivedData -type d -path "*/Containers/Data/Documents/proof" | head -n 1)
+          mkdir -p "$HOME/Documents/proof"
+          if [ -n "$PROOF_DIR" ]; then rsync -a "$PROOF_DIR/" "$HOME/Documents/proof/"; fi
+      - name: Build share pack
+        run: |
+          set -euo pipefail
+          bash scripts/share_pack.sh
+      - name: Collect share zip
+        run: |
+          SHARE=$(ls -t "$HOME/Documents/share"/beauty-share-*.zip | head -n 1)
+          echo "SHARE_ZIP=$SHARE" >> $GITHUB_ENV
+          cp "$SHARE" ./share.zip
+      - name: Upload share-pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: share-pack
+          path: share.zip
+      - name: proof-pack contents check
+        run: |
+          set -euo pipefail
+          test -f proof-pack.zip && test -f share.zip && test -f edge_mock_result.json
+          unzip -l proof-pack.zip | tee manifest.txt
+          for f in edge_recon/demo.mp4 edge_recon/diagnostics.png edge_recon/last_job.json; do
+            grep -q "$f$" manifest.txt || { echo "missing $f"; exit 1; }
+          done
+          unzip -p proof-pack.zip edge_recon/last_job.json > last_job.json || true
+          SZ_DEMO=$(unzip -l proof-pack.zip | awk '/edge_recon\/demo.mp4$/ {print $1}'); test ${SZ_DEMO:-0} -gt 0
+          SZ_DIAG=$(unzip -l proof-pack.zip | awk '/edge_recon\/diagnostics.png$/ {print $1}'); test ${SZ_DIAG:-0} -gt 0
+          SZ_JOB=$(unzip -l proof-pack.zip | awk '/edge_recon\/last_job.json$/ {print $1}'); test ${SZ_JOB:-0} -gt 0
+          echo "edge_recon sizes (bytes): demo=$SZ_DEMO, diagnostics=$SZ_DIAG, job=$SZ_JOB" >> $GITHUB_STEP_SUMMARY
+          echo "--- contents-check tail ---" >> $GITHUB_STEP_SUMMARY
+          tail -n 50 manifest.txt >> $GITHUB_STEP_SUMMARY
+      - name: Compute hashes and sizes
+        id: hashes
+        run: |
+          set -euo pipefail
+          PROOF_SHA=$(shasum -a 256 proof-pack.zip | awk '{print $1}')
+          PROOF_SZ=$(wc -c < proof-pack.zip)
+          EDGE_SHA=$(shasum -a 256 edge_mock_result.json | awk '{print $1}')
+          EDGE_SZ=$(wc -c < edge_mock_result.json)
+          SHARE_SHA=$(shasum -a 256 share.zip | awk '{print $1}')
+          SHARE_SZ=$(wc -c < share.zip)
+          echo "PROOF_SHA=$PROOF_SHA" >> $GITHUB_ENV
+          echo "PROOF_SZ=$PROOF_SZ" >> $GITHUB_ENV
+          echo "EDGE_SHA=$EDGE_SHA" >> $GITHUB_ENV
+          echo "EDGE_SZ=$EDGE_SZ" >> $GITHUB_ENV
+          echo "SHARE_SHA=$SHARE_SHA" >> $GITHUB_ENV
+          echo "SHARE_SZ=$SHARE_SZ" >> $GITHUB_ENV
+          echo "proof-pack.zip: sha256=$PROOF_SHA size=$PROOF_SZ" >> $GITHUB_STEP_SUMMARY
+          echo "edge_mock_result.json: sha256=$EDGE_SHA size=$EDGE_SZ" >> $GITHUB_STEP_SUMMARY
+          echo "share.zip: sha256=$SHARE_SHA size=$SHARE_SZ" >> $GITHUB_STEP_SUMMARY
+      - name: Gather debug logs
+        if: ${{ failure() || always() }}
+        run: |
+          set -euo pipefail
+          mkdir -p debug
+          LOG=$(ls -t DerivedData/Logs/Build/*.xcactivitylog 2>/dev/null | head -n 1 || true)
+          if [ -n "$LOG" ]; then /usr/bin/tail -n 200 "$LOG" > debug/build_tail.txt || true; fi
+          if [ -d "$HOME/Documents/proof" ]; then (cd "$HOME/Documents" && zip -r ../proof-debug.zip proof); mv "$HOME/proof-debug.zip" ./proof-debug.zip; fi
+      - name: Upload debug logs
+        if: ${{ failure() || always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof-debug
+          path: |
+            debug
+            proof-debug.zip
+      - name: Comment artifacts on PR
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = context.runId;
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({owner: context.repo.owner, repo: context.repo.repo, run_id: runId});
+            const find = n => data.artifacts.find(a=>a.name===n);
+            const proof = find('proof-pack');
+            const edge = find('edge-mock-smoke');
+            const share = find('share-pack');
+            const sum = `proof-pack.zip: sha256=${process.env.PROOF_SHA} size=${process.env.PROOF_SZ}\nedge_mock_result.json: sha256=${process.env.EDGE_SHA} size=${process.env.EDGE_SZ}\nshare.zip: sha256=${process.env.SHARE_SHA} size=${process.env.SHARE_SZ}`;
+            const body = [
+              `proof-pack: ${proof ? proof.archive_download_url : 'n/a'}`,
+              `edge_mock_result.json: ${edge ? edge.archive_download_url : 'n/a'}`,
+              `share-pack: ${share ? share.archive_download_url : 'n/a'}`,
+              '', sum
+            ].join('\n');
+            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body});
+      # duplicate upload step removed (already uploaded earlier)
+

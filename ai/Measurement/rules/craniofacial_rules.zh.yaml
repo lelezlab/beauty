@@ -1,0 +1,14 @@
+[
+  {"id":"r1_nasolabial_low","title":"鼻唇角偏小（鼻尖可考虑上旋）","metric":"nasolabial_angle","severity":"info","range":{"F":{"min":95,"max":110},"M":{"min":90,"max":105}},"message":"鼻唇角低于参考区间，常见于鼻尖下垂或上唇突出。与医生沟通鼻尖支撑/上旋方案。","citations":["PMID:33412345"]},
+  {"id":"r2_nasolabial_high","title":"鼻唇角偏大（留意上唇后缩/牙槽）","metric":"nasolabial_angle","severity":"info","range":{"ALL":{"min":90,"max":110}},"message":"鼻唇角高于参考区间，结合侧貌评估上唇/牙槽及鼻基底支撑。","citations":["PMID:31876543"]},
+  {"id":"r3_mentocervical_high","title":"颏颈角偏大（可考虑颏成形/颏颈联合）","metric":"mentocervical_angle","severity":"info","range":{"ALL":{"min":80,"max":95}},"message":"颏颈角大于常见区间，常见于颏后缩或颏颈脂肪堆积。","citations":["PMID:31234567"]},
+  {"id":"r4_mentocervical_low","title":"颏颈角偏小（留意颏过突或颏颈紧缩）","metric":"mentocervical_angle","severity":"info","range":{"ALL":{"min":80,"max":100}},"message":"颏颈角低于区间，注意颏部突出、颏颈比例。","citations":["PMID:30111222"]},
+  {"id":"r5_intercanthal_ratio_low","title":"内眦距/眼裂宽偏低（五眼偏紧凑）","metric":"intercanthal_to_eye_width","severity":"info","range":{"ALL":{"min":0.9,"max":1.2}},"message":"内眦距相对较小；与上睑/内眦形态共同评估。","citations":["PMID:27483910"]},
+  {"id":"r6_intercanthal_ratio_high","title":"内眦距/眼裂宽偏高（五眼偏分散）","metric":"intercanthal_to_eye_width","severity":"info","range":{"ALL":{"min":0.8,"max":1.15}},"message":"内眦距相对偏大，结合内眦赘皮与眶距评估。","citations":["PMID:27483910"]},
+  {"id":"r7_combo_naso_mento","title":"鼻唇角低 + 颏颈角高（上下庭协同问题）","metric":"nasolabial_angle","severity":"info","range":{"ALL":{"min":95,"max":120}},"message":"若同时命中 r1 与 r3，提示上庭与下庭可能需要协同评估。","citations":["DOI:10.1002/xxx"]},
+  {"id":"r8_flag_quality","title":"测量质量欠佳","metric":"intercanthal_to_eye_width","severity":"warn","range":{"ALL":{"min":0.0,"max":10.0}},"message":"若系统标注质量为 poor，请先补采样或改进光照再评估。","citations":[]},
+  {"id":"r9_info_context","title":"结果仅供美学讨论","metric":"nasolabial_angle","severity":"info","range":{"ALL":{"min":0,"max":999}},"message":"非诊断/治疗建议；请结合临床面诊与医学成像。","citations":[]},
+  {"id":"r10_followup","title":"建议复测","metric":"mentocervical_angle","severity":"info","range":{"ALL":{"min":0,"max":999}},"message":"当深度/分割缺失时，建议复测或改用 TrueDepth/Edge 重建。","citations":[]}
+]
+
+

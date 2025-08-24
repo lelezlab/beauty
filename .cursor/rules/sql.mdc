@@ -1,0 +1,10 @@
+Rule Type: Auto Attached
+description: Supabase 表/策略/函数脚本约定
+globs: ["supabase/sql/*.sql", "supabase/functions/**/*.ts"]
+alwaysApply: true
+---
+# 规范
+- 迁移脚本幂等/带注释；RLS/索引同步声明
+- Edge Functions：`reconstruct-request-urls|submit|run|status` 四件套；提供 Mock 路径以便本地演示
+- 环境变量通过 Supabase 项目配置或 CI Secret 注入；严禁入库密钥
+

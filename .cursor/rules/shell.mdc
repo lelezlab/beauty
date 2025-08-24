@@ -1,0 +1,11 @@
+Rule Type: Auto Attached
+description: Shell 脚本规范（可复现/可诊断）
+globs: ["**/*.sh"]
+alwaysApply: true
+---
+# 规范
+- 开头加：`set -euo pipefail` 与 `IFS=$'\n\t'`
+- 输出：阶段 Banner、产物路径、sha256、size；失败收敛到 `proof-debug.zip`
+- 不写死路径；允许传 `--out`、`--mirror-base`；CI 用 env 注入
+- 大文件/敏感文件走 zip 输出，不入库
+

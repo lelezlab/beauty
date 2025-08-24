@@ -1,0 +1,17 @@
+{
+  "id": "jawline_2025Q3_01",
+  "version": "0.9.0",
+  "min_app_version": "1.0.0",
+  "category": "jaw",
+  "display_name": "下颌缘更清晰（示例）",
+  "controls": [
+    {"key":"jawline_sharpness","type":"float","range":[0,1],"default":0.5}
+  ],
+  "landmark_ops": [],
+  "texture_ops": [],
+  "assets": [],
+  "model_requirements":[],
+  "legal": {"region_block":[], "disclaimer_id":"sim_only"},
+  "telemetry":{"event":"effect_used"}
+}
+

@@ -1,0 +1,4 @@
+[functions."kb-crawler"]
+verify_jwt = false
+  [functions."kb-crawler".schedule]
+  cron = "0 8,20 * * *"

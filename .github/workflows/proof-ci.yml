@@ -1,0 +1,14 @@
+name: Proof Pack CI (manual)
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+jobs:
+  noop:
+    runs-on: macos-14
+    steps:
+      - run: echo "manual trigger"
+
+

@@ -1,0 +1,7 @@
+[
+  {"id":"rhinoplasty_dorsal_straighten","name":"鼻背直化","params":{"bridge_straighten":[0,1]},"rules":["dorsal_curvature"],"anatomy":["upper_lateral_cartilage","nasal_bone"]},
+  {"id":"tip_rotation","name":"鼻尖旋转","params":{"tip_rotation":[-8,8]},"rules":["nasolabial_angle_deg_female"]},
+  {"id":"chin_implant","name":"下巴前移","params":{"chin_projection":[0,0.3]},"rules":["chin_projection_mm"],"anatomy":["pogonion","menton"]}
+]
+
+

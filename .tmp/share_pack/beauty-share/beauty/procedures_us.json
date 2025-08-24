@@ -1,0 +1,72 @@
+[
+  {
+    "id": "rhino_implant_silicone",
+    "category": "nose",
+    "name": "Silicone Implant Rhinoplasty",
+    "summary": "Silicone dorsal augmentation with soft-tip refinement",
+    "principles": ["Subperiosteal pocket", "Dorsal augmentation", "Tip cap or sutures"],
+    "risks": ["Infection", "Implant shift", "Skin thinning"],
+    "contraindications": ["Active skin infection", "Autoimmune connective tissue disease"],
+    "aftercare": ["Cold compress 48h", "Elevate head for 1 week", "Avoid glasses for 3–4 weeks"],
+    "budgetNotes": ["Hospital/OR fee extra", "Revision cost higher"],
+    "questionChecklist": ["Source and grade of implant?", "Pocket plane and fixation?", "Plan if tip skin thin?"],
+    "recoveryDays": 14,
+    "budgetUSD": [3500, 8000],
+    "effectStability": 4,
+    "invasiveness": 3,
+    "evidenceLevel": "B"
+  },
+  {
+    "id": "rhino_goretex",
+    "category": "nose",
+    "name": "Gore-Tex Rhinoplasty",
+    "summary": "ePTFE dorsal onlay with natural integration",
+    "principles": ["Subperiosteal plane", "Dorsal onlay", "Tip support"],
+    "risks": ["Infection", "Removal difficulty"],
+    "contraindications": ["Bleeding disorders", "Severe allergy history"],
+    "aftercare": ["Avoid nose massage 4 weeks", "No strenuous exercise 2 weeks"],
+    "budgetNotes": ["ePTFE material cost varies"],
+    "questionChecklist": ["Thickness and porosity?", "Handling of radix and tip?"],
+    "recoveryDays": 14,
+    "budgetUSD": [4000, 9000],
+    "effectStability": 4,
+    "invasiveness": 3,
+    "evidenceLevel": "B"
+  },
+  {
+    "id": "rhino_autologous_cartilage",
+    "category": "nose",
+    "name": "Autologous Cartilage Rhinoplasty",
+    "summary": "Septal/ear/rib cartilage for dorsum and tip",
+    "principles": ["Harvest cartilage", "Framework shaping", "Tip projection and rotation"],
+    "risks": ["Donor site morbidity", "Warping"],
+    "contraindications": ["Severe chest wall deformity (for rib)", "Active smoking (relative)"],
+    "aftercare": ["Donor site wound care", "Silicone tape for scar 3 months"],
+    "budgetNotes": ["Anesthesia + donor site raise cost", "Most durable outcome"],
+    "questionChecklist": ["Which donor site?", "How to prevent warping?", "Plan for tip support?"],
+    "recoveryDays": 21,
+    "budgetUSD": [7000, 15000],
+    "effectStability": 5,
+    "invasiveness": 4,
+    "evidenceLevel": "A"
+  },
+  {
+    "id": "rhino_filler_ha",
+    "category": "nose",
+    "name": "Hyaluronic Acid Filler Rhinoplasty",
+    "summary": "Non-surgical dorsal alignment and tip tweak",
+    "principles": ["Precise plane injection", "Microbolus", "Avoid vascular compromise"],
+    "risks": ["Vascular occlusion", "Asymmetry", "Resorption"],
+    "contraindications": ["Pregnancy", "Coagulation disorder", "Previous vascular event"],
+    "aftercare": ["Avoid heat/sauna 48h", "Gentle massage only if advised", "Follow-up in 2 weeks"],
+    "budgetNotes": ["Depends on syringe count", "Touch-up may be needed"],
+    "questionChecklist": ["Cannula vs needle?", "Emergency hyaluronidase plan?"],
+    "recoveryDays": 2,
+    "budgetUSD": [400, 1500],
+    "effectStability": 2,
+    "invasiveness": 1,
+    "evidenceLevel": "C"
+  }
+]
+
+

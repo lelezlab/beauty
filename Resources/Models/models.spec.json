@@ -1,0 +1,50 @@
+{
+  "models": [
+    {
+      "id": "facemesh_mediapipe_task",
+      "task": "face_landmarks_468",
+      "format": "task",
+      "source": { "type": "mediapipe_task", "name": "face_landmarker", "version": "latest" },
+      "license": "Apache-2.0",
+      "dest": "Resources/Models/facemesh/face_landmarker.task"
+    },
+    {
+      "id": "arcface_ir50",
+      "task": "face_embedding_112x112",
+      "format": "onnx",
+      "source": { "type": "github_release", "repo": "deepinsight/insightface", "asset_name_regex": "(?i)(arcface|glint|w600k|ms1mv3).*r50.*\\.onnx$" },
+      "postprocess": ["onnxsim", {"convert_coreml": {"output": "Resources/Models/arcface/arcface_ir50.mlmodel"}}],
+      "license": "MIT",
+      "dest": "Resources/Models/arcface/arcface_ir50.onnx"
+    },
+    {
+      "id": "midas_s",
+      "task": "monocular_depth",
+      "format": "onnx",
+      "source": { "type": "github_release", "repo": "isl-org/MiDaS", "asset_name_regex": "(?i)(midas_small|dpt_.*_small).*\\.onnx$" },
+      "license": "Intel-ISL",
+      "dest": "Resources/Models/midas/midas_small.onnx"
+    },
+    {
+      "id": "face_parsing_bisenet",
+      "task": "face_parsing_19cls",
+      "format": "onnx",
+      "source": { "type": "convert_from_repo", "repo": "zllrunning/face-parsing.PyTorch", "weights_hint": "79999_iter.pth" },
+      "postprocess": ["onnxsim"],
+      "license": "MIT",
+      "dest": "Resources/Models/face_parsing/bisenet_fp16.onnx"
+    },
+    {
+      "id": "deca",
+      "task": "face_3d_reconstruction",
+      "format": "onnx",
+      "source": { "type": "convert_from_repo", "repo": "YadiraF/DECA", "weights_hint": "deca_model.tar" },
+      "postprocess": ["onnxsim"],
+      "license": "Non-commercial",
+      "dest": "Resources/Models/deca/deca.onnx"
+    }
+  ]
+}
+
+
+

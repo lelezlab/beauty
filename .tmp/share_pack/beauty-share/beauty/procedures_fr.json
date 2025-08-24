@@ -1,0 +1,72 @@
+[
+  {
+    "id": "rhino_implant_silicone",
+    "category": "nose",
+    "name": "Rhinoplastie par implant en silicone",
+    "summary": "Augmentation dorsale en silicone avec affinement de la pointe",
+    "principles": ["Loge sous-périostée", "Augmentation du dorsum", "Modelage de la pointe"],
+    "risks": ["Infection", "Migration", "Amincissement cutané"],
+    "contraindications": ["Infection cutanée active", "Maladie du tissu conjonctif"],
+    "aftercare": ["Glaçage 48h", "Tête surélevée 1 semaine", "Éviter les lunettes 3–4 semaines"],
+    "budgetNotes": ["Frais d'hôpital/bloc en sus", "Révision plus coûteuse"],
+    "questionChecklist": ["Origine et grade de l'implant ?", "Plan de fixation ?", "Peau fine à la pointe : stratégie ?"],
+    "recoveryDays": 14,
+    "budgetUSD": [3500, 8000],
+    "effectStability": 4,
+    "invasiveness": 3,
+    "evidenceLevel": "B"
+  },
+  {
+    "id": "rhino_goretex",
+    "category": "nose",
+    "name": "Rhinoplastie Gore-Tex (ePTFE)",
+    "summary": "Onlay du dorsum avec intégration tissulaire naturelle",
+    "principles": ["Plan sous-périosté", "Onlay dorsal", "Soutien de la pointe"],
+    "risks": ["Infection", "Difficulté de retrait"],
+    "contraindications": ["Troubles de la coagulation", "Antécédent allergique sévère"],
+    "aftercare": ["Pas de massage 4 semaines", "Pas de sport intense 2 semaines"],
+    "budgetNotes": ["Coût du matériau ePTFE variable"],
+    "questionChecklist": ["Épaisseur et porosité ?", "Gestion du radix et de la pointe ?"],
+    "recoveryDays": 14,
+    "budgetUSD": [4000, 9000],
+    "effectStability": 4,
+    "invasiveness": 3,
+    "evidenceLevel": "B"
+  },
+  {
+    "id": "rhino_autologous_cartilage",
+    "category": "nose",
+    "name": "Rhinoplastie par cartilage autologue",
+    "summary": "Cartilage septal/auriculaire/costal pour le dorsum et la pointe",
+    "principles": ["Prélèvement de cartilage", "Modelage du cadre", "Projection et rotation de la pointe"],
+    "risks": ["Morbidité du site donneur", "Gauchissement"],
+    "contraindications": ["Déformation thoracique sévère (pour côte)", "Tabagisme actif (relatif)"],
+    "aftercare": ["Soin de la plaie du site donneur", "Ruban silicone cicatrice 3 mois"],
+    "budgetNotes": ["Anesthésie + site donneur augmentent le coût", "Durabilité supérieure"],
+    "questionChecklist": ["Quel site donneur ?", "Prévention du gauchissement ?", "Soutien de la pointe ?"],
+    "recoveryDays": 21,
+    "budgetUSD": [7000, 15000],
+    "effectStability": 5,
+    "invasiveness": 4,
+    "evidenceLevel": "A"
+  },
+  {
+    "id": "rhino_filler_ha",
+    "category": "nose",
+    "name": "Rhinoplastie par acide hyaluronique",
+    "summary": "Alignement dorsal et ajustement de la pointe sans chirurgie",
+    "principles": ["Injection au bon plan", "Micro-bolus", "Éviter la compromission vasculaire"],
+    "risks": ["Occlusion vasculaire", "Asymétrie", "Résorption"],
+    "contraindications": ["Grossesse", "Trouble de coagulation", "Antécédent vasculaire"],
+    "aftercare": ["Éviter sauna/chaleur 48h", "Massage doux si conseillé", "Contrôle à 2 semaines"],
+    "budgetNotes": ["Dépend du nombre de seringues", "Retouches possibles"],
+    "questionChecklist": ["Canule ou aiguille ?", "Plan d'urgence hyaluronidase ?"],
+    "recoveryDays": 2,
+    "budgetUSD": [400, 1500],
+    "effectStability": 2,
+    "invasiveness": 1,
+    "evidenceLevel": "C"
+  }
+]
+
+
