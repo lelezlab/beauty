@@ -1,0 +1,21 @@
+Rule Type: Manual
+description: Git 提交/PR/分支规范（强门禁）
+globs: ["*.git/*", "*.git*"]
+alwaysApply: false
+---
+# 提交信息
+`<type>: <desc>`，type 取：
+feat | fix | docs | style | refactor | perf | test | chore | build | ci | revert
+
+# 分支
+- 主分支：main（随时可发布）
+- 功能分支：`feat/*`、`mvp/*`（如 `mvp/edge-remote`）
+- 修复分支：`fix/*`
+- 发布分支：`release/*`
+
+# PR 规则（必读）
+- **CI 全绿**才能合并：iOS CI + Proof Pack CI（push & pull_request）。
+- PR 描述 ≤ 2 行；其余由**脚本/CI 自动完成**。
+- PR 评论自动贴三项产物**直链+sha256+size**；失败贴出错误首尾 100 行。
+- 单 PR 改动聚焦一个主题；避免大杂烩。
+

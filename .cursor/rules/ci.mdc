@@ -1,0 +1,12 @@
+Rule Type: Auto Attached
+description: GitHub Actions 工作流习惯与产物校验
+globs: [".github/workflows/*.yml"]
+alwaysApply: true
+---
+# 约定
+- 所有 Job 使用 `set -euo pipefail`；失败上传 `proof-debug.zip`（日志/摘要）。
+- iOS CI：构建运行、Proof 菜单脚本化、产出 `proof-pack.zip` 与 `edge_mock_result.json`。
+- Proof Pack CI：`share_pack.sh` 产 `share-*.zip`；校验存在且 size>0。
+- Summary 必打印**每个产物 sha256 + size**；PR 自动评论直链。
+- 支持 `workflow_dispatch` 手触发，默认按 PR/push 自动触发。
+

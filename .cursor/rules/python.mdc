@@ -1,0 +1,26 @@
+Rule Type: Auto Attached
+description: Python 脚本规范（模型下载/转换/校验/分享）
+globs: ["**/*.py"]
+alwaysApply: true
+---
+# 角色
+你是一名资深 Python 工程师，负责 **可复现** 的下载、转换、校验与打包脚本。
+
+# 约束
+- Python 3.10+；PEP8；类型注解（`typing`）；模块化与可测试。
+- 失败即退出非零；打印清晰 Summary（每个产物 sha256 与 size）。
+- 不写入秘钥到仓库；支持镜像 `--mirror-base` 与环境变量。
+
+# 关键脚本
+- `scripts/models_sync.py`
+  - 读取 `Resources/Models/models.spec.json` → 下载到 `Resources/Models/**` → 计算 sha256/size → 生成 `models.lock.json`。
+  - 支持 mediapipe task 通过 `importlib.resources` 定位；失败回退官方镜像。
+  - `convert_from_repo`：如 BiSeNet（clone、抓取权重、导出 ONNX）；onnxsim 可选。
+  - 生成 `THIRD_PARTY_MODELS.md`。
+- `scripts/share_pack.sh` + `scripts/scan_for_secrets.py`
+  - rsync 到 `~/Documents/share/.../` → 目录清单 → 敏感扫描 → 产出 `share-*.zip` 与报告。
+
+# 最佳实践
+- 网络波动重试、断点续传；哈希校验必不可少。
+- 打印「开始/结束/耗时」；出错附建议（mirror、代理、空间）。
+
