@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RunAIMetricsView: View {
-    @Environment(\._dismiss) private var dismiss
+    @Environment(\.dismiss) private var dismiss
     @State private var status: String = "Running..."
 
     var body: some View {
