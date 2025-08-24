@@ -19,6 +19,7 @@ final class RemoteEdgeClient: ReconstructionProvider {
     }
 
     func reconstruct(from bundle: CaptureBundle) async throws -> FaceMesh3D {
+        if AppFlags.isProofRunning { throw EdgeErr.timeout }
         guard !base.isEmpty else { throw EdgeErr.badConfig }
         // 1) request upload urls
         let deviceId = DeviceHash.anon()
@@ -64,9 +65,10 @@ final class RemoteEdgeClient: ReconstructionProvider {
         try? FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
         func download(_ key: String, name: String) async throws -> URL? {
             guard let path = outs[key] as? String, let u = URL(string: path) else { return nil }
-            let (d, _) = try await URLSession.shared.data(from: u)
+            let (tmp, _) = try await URLSession.shared.download(from: u)
             let dest = cacheDir.appendingPathComponent(name)
-            try d.write(to: dest)
+            _ = try? FileManager.default.removeItem(at: dest)
+            try FileManager.default.moveItem(at: tmp, to: dest)
             return dest
         }
         let glbURL = try await download("mesh_glb", name: "mesh.glb")
@@ -81,14 +83,14 @@ final class RemoteEdgeClient: ReconstructionProvider {
                 let node = try GLBLoader.loadFaceNode(from: g)
                 if let geo = node.geometry ?? node.childNodes.first?.geometry {
                     var mesh = GLBLoader.scnGeometryToFaceMesh(geo)
-                    if let t = texURL, let data = try? Data(contentsOf: t), let img = UIImage(data: data) { mesh.albedo = img }
+                    if let t = texURL { mesh.albedo = UIImage(contentsOfFile: t.path) }
                     mesh.metadata = ["source": "edge", "job_id": jobId, "cache": cacheDir.path]
                     UserDefaults.standard.set("remote", forKey: "edge_provider")
                     UserDefaults.standard.set(jobId, forKey: "edge_job_id")
                     UserDefaults.standard.set("done", forKey: "edge_last_result")
                     UserDefaults.standard.set(Date().timeIntervalSince(start) * 1000.0, forKey: "edge_latency_ms")
-                    if let gsz = (try? Data(contentsOf: g))?.count { UserDefaults.standard.set(gsz, forKey: "edge_glb_size") }
-                    if let t = texURL, let tsz = (try? Data(contentsOf: t))?.count { UserDefaults.standard.set(tsz, forKey: "edge_tex_size") }
+                    if let attrs = try? FileManager.default.attributesOfItem(atPath: g.path), let gsz = attrs[.size] as? NSNumber { UserDefaults.standard.set(gsz.intValue, forKey: "edge_glb_size") }
+                    if let t = texURL, let attrs = try? FileManager.default.attributesOfItem(atPath: t.path), let tsz = attrs[.size] as? NSNumber { UserDefaults.standard.set(tsz.intValue, forKey: "edge_tex_size") }
                     return mesh
                 }
             } catch {
