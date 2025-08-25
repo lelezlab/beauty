@@ -1,0 +1,37 @@
+Rule Type: Always
+description: 项目上下文、术语、边界与质量门禁（beauty：AI 医美 3D 面诊）
+globs: ["*"]
+alwaysApply: true
+---
+# 项目简介
+- 平台：iOS 17+（SwiftUI）
+- 能力：TrueDepth/ARKit 实时网格 → 三视图 Edge 重建 → 3D 预览（Heatmap/Wireframe/Texture）→ 黄金面罩热力 → 诊断/Proof Pack
+- 后端：Supabase Edge Functions（重建队列与签名 URL），可 Mock 回退
+- 模型：ArcFace（人脸嵌入）、MediaPipe Face Landmarker（task）、BiSeNet（面部分割）、MiDaS（深度）
+- 模型管理：`Resources/Models/models.spec.json` → `scripts/models_sync.py` → `models.lock.json`（sha256+size）→ 运行时校验与沙盒覆盖（ModelRegistry/ModelFetcher）
+
+# 目录约定（关键）
+- Core/AI：模型注册、哈希工具、Tier/开关
+- Core/ThreeD：FaceMesh3D、GLBLoader（GLTFSceneKit→SceneKit 兜底、UV v=1−v、Units.mmToMeters）
+- Core/Reconstruction：RemoteEdgeProvider/Mock、ReconstructionOrchestrator、ReconCache
+- Features/ThreeD：Face3DPreviewView（热力/线框/纹理、失败空态与 Retry Edge）
+- Views/Settings：Developer / Diagnostics（Edge provider/job/latency/size 等）
+- scripts/：`models_sync.py`、convert 脚本、`share_pack.sh`
+- Resources/Models/：spec/lock/第三方说明（不直接入库权重）
+
+# 术语
+- Proof Pack：一键生成演示材料（demo.mp4、diagnostics.png、last_job.json、zip）
+- Diagnostics：调试面板与截图三行（ARKit/缓存/重建）、Edge 六行（provider/job/result/cache/latency/size）
+- ReconCache：下载的 `mesh.glb`/`texture.png`/`last_job.json` 的沙盒缓存
+
+# 质量门禁（强）
+1. **PR 不得红**：iOS CI 与 Proof Pack CI（push & pull_request）均需通过。
+2. PR 评论需自动贴出：`proof-pack.zip`、`share-*.zip`、`edge_mock_result.json` 的**直链+sha256+size**。
+3. **最小粒度**：能脚本/CI完成的步骤，一律用脚本或 CI 实现；PR 描述 ≤ 2 行。
+4. 禁止入库：模型权重、证书、.xcarchive、dSYM、大文件产物；改走 `share_pack.sh`。
+5. 安全：钥匙/密钥必须走环境变量或密文，`scan_for_secrets.py` 必须通过。
+
+# 交互原则（零操作）
+- 设备上：Developer → Proof Pack 菜单完成演示；用户无额外交互。
+- 非 TrueDepth 设备：走 Edge 重建或 Mock；空态需解释与指引。
+

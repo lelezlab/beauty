@@ -1,0 +1,35 @@
+Rule Type: Auto Attached
+description: Swift/SwiftUI & ARKit/SceneKit 编码规范与约束
+globs: ["**/*.swift"]
+alwaysApply: true
+---
+# 代码风格
+- 使用 Swift 5.9+、Swift Concurrency（`async/await`），避免回调地狱。
+- Model/ViewModel 分层；`View` 纯渲染，副作用放在 `ObservableObject`。
+- 依赖注入：环境对象或构造注入；避免全局单例。
+- 不可变优先、`struct` 优先；错误用 `Error` + `Result`。
+- 统一日志：`DebugLog`；关键路径加 `guard` 并抛错域：`remote.network|remote.status|remote.parse|remote.cache`。
+- 单位统一：毫米→米使用 `Units.mmToMeters(_:)`；UV 统一 `v = 1 - v`（GLBLoader 已处理）。
+
+# ARKit/3D
+- `Face3DPreviewView`：模式切换 Heatmap/Wireframe/Texture；失败空态给“Retry Edge”。
+- GLB 加载：优先 `GLTFSceneKit`，失败回退 `SCNScene(url:)`；从 `SCNGeometrySource/Element` 提取 position/uv/indices 生成 `FaceMesh3D`。
+- 纹理：绑定 `texture.png`；默认 Texture 成功态。
+
+# 重建链路
+- `RemoteEdgeProvider`：请求签名 URL → PUT 上传三视图 → 提交 → 轮询状态 → 下载 `mesh.glb/texture.png` → 写 `ReconCache/<job_id>/last_job.json`。
+- `ReconstructionOrchestrator`：优先 Remote，失败回退 Mock；写入 `edge_*` UserDefaults 与 `Diagnostics`。
+- `DiagnosticsView`：展示 Edge provider/job id/last_result/cache/latency(ms)/sizes；可点按复制。
+
+# 模型管理
+- `ModelRegistry.path(for:)` 必须校验 `models.lock.json` 的 sha256 与 size；优先沙盒覆盖。
+- `ModelFetcher.fetchAll()`：按 lock 拉取到 `Application Support/ModelsOverride/` 并校验，写 `models_fetch_ok` 与时间戳。
+
+# 性能/内存
+- 场景资源释放在 `viewWillDisappear`/移除节点；避免缓存泄露。
+- 计算重任务放后台队列；UI 更新回主线程。
+
+# 测试/演示
+- Developer 菜单保留：Run Edge Recon Demo / Clear ReconCache / Re-Fetch Models。
+- ProofProducer：demo 录屏 ~8s、截图、复制 last_job.json。
+

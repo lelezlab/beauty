@@ -1,0 +1,20 @@
+Rule Type: Auto Attached
+description: 文档规范（README/CHANGELOG/演示说明）
+globs: ["*.md", "README.md", "CHANGELOG.md"]
+alwaysApply: false
+---
+# README 必含
+- 项目简介 & 目标（零交互演示闭环）
+- 运行与构建：iOS 版本、TrueDepth 要求、非 TrueDepth 的 Edge 流程
+- Developer 菜单与 Proof Pack 说明
+- 模型管理：spec→sync→lock→fetch 校验
+- CI：iOS CI / Proof Pack CI 产物与下载位置
+- **Cursor 历史下载链接**（保留二级目录，便于回滚）
+
+# CHANGELOG
+- 语义化且简明：新增 / 修复 / 兼容性
+- 与 PR 编号互相引用
+
+# 演示材料
+- 在 README 附「如何生成 Proof Pack / Share Pack」与示例目录结构
+
