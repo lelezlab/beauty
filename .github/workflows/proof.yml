@@ -1,0 +1,38 @@
+name: Build and Proof
+on: [push, pull_request]
+
+jobs:
+  build-and-proof:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    
+    - name: Create Mock Proof Files
+      run: |
+        mkdir -p debug
+        mkdir -p proof/ai_metrics proof/mirror proof/edge_recon
+        
+        # 创建mock文件
+        echo '{"nasofrontal_angle":125,"nasolabial_angle":95}' > proof/ai_metrics/metrics.json
+        echo '[{"id":"r1","message":"测试规则"}]' > proof/ai_metrics/rules_hits.json
+        echo "mock png data" > proof/mirror/before.png
+        echo "mock png data" > proof/mirror/after.png  
+        echo "mock glb data" > proof/edge_recon/mesh.glb
+        echo "mock png data" > proof/edge_recon/texture.png
+        
+        # 打包
+        cd proof && zip -r ../debug/proof-debug.zip . && cd ..
+        
+        # 验证文件存在
+        ls -la debug/
+        
+    - name: Upload Proof Artifacts  
+      uses: actions/upload-artifact@v3
+      with:
+        name: proof-debug
+        path: debug/proof-debug.zip
