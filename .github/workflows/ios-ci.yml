@@ -14,11 +14,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode 16
-        id: xcode
-        uses: apple-actions/setup-xcode@v2
-        with:
-          xcode-version: '16.*'
+- name: Select Xcode
+  uses: maxim-lobanov/setup-xcode@v1
+  with:
+    xcode-version: '16.*'
+
 
       - name: Xcode Version
         run: |
