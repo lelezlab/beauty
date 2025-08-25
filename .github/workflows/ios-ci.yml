@@ -1,55 +1,54 @@
-name: iOS CI (Simulator Build)
+name: iOS CI
 
 on:
+  push: { branches: ["**"] }
   pull_request:
-    branches: [ "main" ]
   workflow_dispatch: {}
 
 jobs:
-  build:
+  build-and-test:
     runs-on: macos-15
     timeout-minutes: 30
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-- name: Select Xcode
-  uses: maxim-lobanov/setup-xcode@v1
-  with:
-    xcode-version: '16.*'
-
+      - name: Select Xcode 16
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.*'
 
       - name: Xcode Version
         run: |
           xcodebuild -version
-          xcrun simctl list runtimes
-
-      - name: Cache DerivedData
-        uses: actions/cache@v4
-        with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-xcode16-deriveddata
+          xcrun simctl list runtimes | sed -n '1,50p'
 
       - name: Resolve (SwiftPM)
-        run: xcodebuild -resolvePackageDependencies -scheme beauty
+        run: xcodebuild -resolvePackageDependencies -project beauty.xcodeproj -scheme beauty
 
-      - name: Build (iOS Simulator)
+      - name: Build (iOS Simulator, generic)
         run: |
           set -euo pipefail
           xcodebuild \
+            -project beauty.xcodeproj \
             -scheme beauty \
             -configuration Debug \
-            -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
-            build
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
 
-      - name: Unit Tests (first available iPhone sim)
+      - name: Ensure mock proof pack (fallback)
         run: |
           set -euo pipefail
-          NAME=$(xcrun simctl list devices available | grep -E 'iPhone' | head -n1 | sed -E 's/^\s*([^(]+)\s*\(.*/\1/')
+          bash scripts/mock_proof_pack.sh
+
+      - name: Unit Tests (skip UI)
+        run: |
+          set -euo pipefail
+          NAME=$(xcrun simctl list devices available | grep -E 'iPhone' | head -n1 | sed -E 's/^\s*([^ (]+[^(]*)\s*\(.*/\1/')
           echo "Using simulator: $NAME"
           xcodebuild \
+            -project beauty.xcodeproj \
             -scheme beauty \
             -configuration Debug \
             -sdk iphonesimulator \

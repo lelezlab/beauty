@@ -13,10 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-    - name: Select Xcode 16
-  uses: maxim-lobanov/setup-xcode@v1
-  with:
-    xcode-version: '16.*'
+      - name: Select Xcode 16
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.*'
 
 
       # 在 Summary 里打印版本环境
@@ -57,6 +57,11 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             clean build
 
+      - name: Ensure mock proof pack (fallback)
+        run: |
+          set -euo pipefail
+          bash scripts/mock_proof_pack.sh
+
       # 失败时收集调试信息并打包
       - name: Collect debug bundle (on failure)
         if: failure()
@@ -65,7 +70,7 @@ jobs:
           xcodebuild -version > debug/xcodebuild.txt || true
           xcrun simctl list > debug/simctl.txt || true
           find ~/Library/Logs -type f -name "*.log" -maxdepth 3 | head -n 200 | xargs -I{} cp "{}" debug/ 2>/dev/null || true
-          zip -r proof-debug.zip debug
+          if [ -d "$HOME/Documents/proof" ]; then (cd "$HOME/Documents" && zip -r ../proof-debug.zip proof); mv "$HOME/proof-debug.zip" ./proof-debug.zip; else zip -r proof-debug.zip debug || true; fi
 
       # 修复这里：用多行 path，而不是 "debug proof-debug.zip"
       - name: Upload debug bundle

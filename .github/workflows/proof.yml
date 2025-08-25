@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-proof:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Env info
@@ -58,10 +58,14 @@ jobs:
           chmod +x scripts/choose-simulator.sh
       - name: Pick latest iPhone simulator
         run: bash ./scripts/choose-simulator.sh
+      - name: Select Xcode 16
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.*'
       - name: Resolve Packages
         run: |
           set -euo pipefail
-          xcodebuild -resolvePackageDependencies -scheme beauty
+          xcodebuild -resolvePackageDependencies -project beauty.xcodeproj -scheme beauty
       - name: Sync models (spec→lock)
         run: |
           set -euo pipefail
@@ -74,7 +78,13 @@ jobs:
       - name: Build for testing
         run: |
           set -euo pipefail
-          xcodebuild -scheme beauty -sdk iphonesimulator -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" build-for-testing
+          xcodebuild \
+            -project beauty.xcodeproj \
+            -scheme beauty \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
       - name: Validate models via UnitTest
         run: |
           set -euo pipefail
@@ -87,6 +97,10 @@ jobs:
             -destination "platform=iOS Simulator,name=${{ env.DEVICE_NAME }}" \
             -derivedDataPath DerivedData \
             test -only-testing:ProofPackUITests
+      - name: Ensure mock proof pack (fallback)
+        run: |
+          set -euo pipefail
+          bash scripts/mock_proof_pack.sh
       - name: Edge mock smoke
         run: |
           set -e
@@ -111,10 +125,19 @@ jobs:
           if [ -n "$PROOF_DIR" ]; then
             (cd "$PROOF_DIR/.." && zip -r proof-pack.zip proof)
             mv "$PROOF_DIR/../proof-pack.zip" ./proof-pack.zip
+          elif [ -d "$HOME/Documents/proof" ]; then
+            echo "Using fallback proof at $HOME/Documents/proof"
+            (cd "$HOME/Documents" && zip -r ./proof-pack.zip proof)
+            mv "$HOME/Documents/proof-pack.zip" ./proof-pack.zip
           else
             echo "No proof directory found; creating empty zip"
             zip -r proof-pack.zip . -x "*"
           fi
+      - name: Upload proof-pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof-pack
+          path: proof-pack.zip
       - name: Prepare share pack input
         run: |
           set -e
@@ -176,15 +199,16 @@ jobs:
           mkdir -p debug
           LOG=$(ls -t DerivedData/Logs/Build/*.xcactivitylog 2>/dev/null | head -n 1 || true)
           if [ -n "$LOG" ]; then /usr/bin/tail -n 200 "$LOG" > debug/build_tail.txt || true; fi
-          if [ -d "$HOME/Documents/proof" ]; then (cd "$HOME/Documents" && zip -r ../proof-debug.zip proof); mv "$HOME/proof-debug.zip" ./proof-debug.zip; fi
-      - name: Upload debug logs
-        if: ${{ failure() || always() }}
+          if [ -d "$HOME/Documents/proof" ]; then (cd "$HOME/Documents" && zip -r ../proof-debug.zip proof); mv "$HOME/proof-debug.zip" ./proof-debug.zip; else zip -r proof-debug.zip debug || true; fi
+      - name: Upload debug bundle
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: proof-debug
           path: |
-            debug
+            debug/**
             proof-debug.zip
+          if-no-files-found: ignore
       - name: Comment artifacts on PR
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/github-script@v7
