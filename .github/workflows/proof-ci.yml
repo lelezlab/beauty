@@ -1,14 +1,81 @@
-name: Proof Pack CI (manual)
+name: build-and-proof
 
 on:
-  workflow_dispatch:
-  push:
   pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: {}
 
 jobs:
-  noop:
-    runs-on: macos-14
+  build-and-proof:
+    runs-on: macos-15
+    timeout-minutes: 30
+
     steps:
-      - run: echo "manual trigger"
+      - uses: actions/checkout@v4
+
+      # 选 Xcode 16（macos-15 预装 iOS 18 SDK）
+      - name: Select Xcode 16
+        uses: apple-actions/setup-xcode@v2
+        with:
+          xcode-version: '16.*'
+
+      # 在 Summary 里打印版本环境
+      - name: Runner versions
+        run: |
+          {
+            echo "### Runner Versions" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**xcodebuild -version**" >> $GITHUB_STEP_SUMMARY
+            xcodebuild -version | tee -a $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Xcode path**" >> $GITHUB_STEP_SUMMARY
+            xcode-select -p | tee -a $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Swift**" >> $GITHUB_STEP_SUMMARY
+            swift --version | tee -a $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Python**" >> $GITHUB_STEP_SUMMARY
+            python3 --version | tee -a $GITHUB_STEP_SUMMARY || true
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Pip onnx/coreml/mediapipe**" >> $GITHUB_STEP_SUMMARY
+            pip3 show onnx coremltools mediapipe 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
+          }
+
+      # 如果是 CocoaPods/xcworkspace，就保留这一段；
+      # 如果是纯 .xcodeproj，请把 -workspace/-scheme 改为 -project/-scheme，并删除 resolvePackageDependencies。
+      - name: Resolve SPM
+        run: xcodebuild -resolvePackageDependencies -workspace beauty.xcworkspace -scheme beauty
+
+      - name: Build for iOS Simulator
+        run: |
+          set -eo pipefail
+          xcodebuild \
+            -workspace beauty.xcworkspace \
+            -scheme beauty \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      # 失败时收集调试信息并打包
+      - name: Collect debug bundle (on failure)
+        if: failure()
+        run: |
+          mkdir -p debug
+          xcodebuild -version > debug/xcodebuild.txt || true
+          xcrun simctl list > debug/simctl.txt || true
+          find ~/Library/Logs -type f -name "*.log" -maxdepth 3 | head -n 200 | xargs -I{} cp "{}" debug/ 2>/dev/null || true
+          zip -r proof-debug.zip debug
+
+      # 修复这里：用多行 path，而不是 "debug proof-debug.zip"
+      - name: Upload debug bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof-debug
+          path: |
+            debug/**
+            proof-debug.zip
+          if-no-files-found: ignore
 
 
